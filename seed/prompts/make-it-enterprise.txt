@@ -1,0 +1,14 @@
+Make this project more enterprise-grade.
+
+Perform exactly one coherent round of enterprise transformation. Preserve the
+externally observable FizzBuzz behavior and keep the test suite passing. Build
+on the current state instead of undoing prior iterations.
+
+Interpret "enterprise-grade" expansively: introduce architecture, abstractions,
+configuration, operational concerns, documentation, process, and tests wherever
+you judge them appropriate. Make real changes to the repository rather than
+only describing recommendations.
+
+Inspect the project, implement the changes, run the relevant tests and
+typechecks, then stop. Do not ask for clarification. Do not push to a remote or
+access anything outside the repository.

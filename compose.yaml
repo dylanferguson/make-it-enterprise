@@ -1,0 +1,70 @@
+services:
+  agent:
+    build:
+      context: .
+      args:
+        OPENCODE_VERSION: "1.17.8"
+        PNPM_VERSION: "11.2.2"
+    cap_drop:
+      - ALL
+    command:
+      - opencode
+      - /workspace
+    cpus: 2
+    environment:
+      ENTERPRISE_DELAY_SECONDS: "${ENTERPRISE_DELAY_SECONDS:-10}"
+      MAX_ITERATIONS: "${MAX_ITERATIONS:-0}"
+      OPENCODE_CONFIG_CONTENT: |
+        {
+          "autoupdate": false,
+          "enabled_providers": ["opencode"],
+          "model": "opencode/deepseek-v4-flash-free",
+          "share": "disabled",
+          "permission": {
+            "*": "allow",
+            "external_directory": "deny",
+            "skill": "deny",
+            "task": "deny",
+            "webfetch": "deny",
+            "websearch": "deny",
+            "read": {
+              "*": "allow",
+              "*.env": "deny",
+              "*.env.*": "deny"
+            }
+          },
+          "watcher": {
+            "ignore": ["node_modules/**", "dist/**", ".git/**"]
+          }
+        }
+      OPENCODE_MODEL: "${OPENCODE_MODEL:-opencode/deepseek-v4-flash-free}"
+      PNPM_STORE_DIR: /home/agent/.cache/pnpm
+    init: true
+    mem_limit: 4g
+    pids_limit: 512
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    stdin_open: true
+    tmpfs:
+      # OpenCode extracts its native OpenTUI library here and loads it.
+      - /tmp:rw,exec,nosuid,nodev,size=512m
+    tty: true
+    volumes:
+      - workspace:/workspace
+      - opencode-data:/home/agent/.local/share/opencode
+      - opencode-config:/home/agent/.config/opencode
+      - opencode-state:/home/agent/.local/state/opencode
+      - agent-cache:/home/agent/.cache
+
+volumes:
+  agent-cache:
+    name: make-it-enterprise-agent-cache
+  opencode-config:
+    name: make-it-enterprise-opencode-config
+  opencode-data:
+    name: make-it-enterprise-opencode-data
+  opencode-state:
+    name: make-it-enterprise-opencode-state
+  workspace:
+    name: make-it-enterprise-workspace
