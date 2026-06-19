@@ -19,6 +19,7 @@ services:
           "autoupdate": false,
           "enabled_providers": ["opencode"],
           "model": "opencode/deepseek-v4-flash-free",
+          "small_model": "opencode/deepseek-v4-flash-free",
           "share": "disabled",
           "permission": {
             "*": "allow",
