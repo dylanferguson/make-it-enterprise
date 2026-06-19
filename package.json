@@ -7,6 +7,7 @@
     "sandbox:agent": "docker compose run --rm agent",
     "sandbox:build": "docker compose build agent",
     "sandbox:check": "sh scripts/check-sandbox.sh",
+    "sandbox:export": "sh scripts/export-sandbox.sh",
     "sandbox:loop": "docker compose run --rm agent enterprise-loop",
     "sandbox:reset": "sh scripts/reset-sandbox.sh",
     "sandbox:shell": "docker compose run --rm agent bash",
