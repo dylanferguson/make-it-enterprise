@@ -1,6 +1,6 @@
 import { AbstractBaseDivisibilityOperatorFactory } from "../../abstracts/AbstractBaseDivisibilityOperatorFactory.js";
 import type { IDivisibilityOperator } from "../../contracts/IDivisibilityOperator.js";
-import { StandardRemainderBasedDivisibilityOperatorImpl } from "../operators/StandardRemainderBasedDivisibilityOperatorImpl.js";
+import { DivisibilityOperatorChainBuilderFactoryBeanFactory } from "./DivisibilityOperatorChainBuilderFactoryBeanFactory.js";
 
 export class DivisibilityOperatorFactoryImpl extends AbstractBaseDivisibilityOperatorFactory {
   private static readonly FACTORY_NAME = "DivisibilityOperatorFactory";
@@ -13,15 +13,17 @@ export class DivisibilityOperatorFactoryImpl extends AbstractBaseDivisibilityOpe
       DivisibilityOperatorFactoryImpl.FACTORY_NAME,
       DivisibilityOperatorFactoryImpl.FACTORY_VERSION,
     );
-    this.singletonOperator = new StandardRemainderBasedDivisibilityOperatorImpl();
+    const builder = DivisibilityOperatorChainBuilderFactoryBeanFactory.getOrCreateBuilder();
+    this.singletonOperator = builder.buildChain();
   }
 
   override createOperator(): IDivisibilityOperator {
-    return new StandardRemainderBasedDivisibilityOperatorImpl();
+    const builder = DivisibilityOperatorChainBuilderFactoryBeanFactory.createBuilder();
+    return builder.buildChain();
   }
 
   override createOperatorWithContext(context: string): IDivisibilityOperator {
-    const contextualOperator = new StandardRemainderBasedDivisibilityOperatorImpl();
-    return contextualOperator;
+    const builder = DivisibilityOperatorChainBuilderFactoryBeanFactory.createBuilder();
+    return builder.buildChain();
   }
 }
