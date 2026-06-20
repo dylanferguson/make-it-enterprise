@@ -37,6 +37,8 @@ import {
 } from "./impl/governance/EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.js";
 import type { IEnterpriseComputationGovernancePolicyEnforcementFacade } from "./contracts/IEnterpriseComputationGovernancePolicyEnforcementFacade.js";
 import { EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory, DivisibilityResolutionFacadeConfigurationProfile } from "./impl/factories/EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory.js";
+import { EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory } from "./impl/factories/EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory.js";
+import { DefaultConfigurationAwareResolutionFacadeDecoratorImpl } from "./impl/decorators/DefaultConfigurationAwareResolutionFacadeDecoratorImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 
@@ -111,6 +113,15 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `strategy=[${divisibilityFacade.getResolutionStrategyDescription()}]`,
     );
   }
+  {
+    const configurationProvider = EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory.createConfigurationProvider();
+    console.debug(
+      `[ModuloArithmeticConfigurationInfrastructure] Enterprise modulo arithmetic configuration provider initialized: ` +
+      `provider=[${configurationProvider.getConfigurationProviderName()} v${configurationProvider.getConfigurationProviderVersion()}], ` +
+      `profile=[${configurationProvider.getConfigurationProfile()}], ` +
+      `divisors=[${configurationProvider.getDivisorConstants().join(", ")}]`,
+    );
+  }
   if (!EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.getCurrentFacade()) {
     const governanceFacade = EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.createGovernanceEnforcementFacade(
       EnterpriseComputationGovernanceFacadeConfigurationProfile.STANDARD,
@@ -166,7 +177,12 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
       validationAwareDecorator,
       InterceptionFilterChainDecoratorConfigurationProfile.ENABLED_STANDARD,
     );
-  return interceptionFilterChainDecorator;
+  const configurationProvider = EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory.createConfigurationProvider();
+  const configurationAwareDecorator = new DefaultConfigurationAwareResolutionFacadeDecoratorImpl(
+    interceptionFilterChainDecorator,
+    configurationProvider,
+  );
+  return configurationAwareDecorator;
 }
 
 export function fizzBuzzValue(value: number): string {
