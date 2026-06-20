@@ -24,10 +24,11 @@ import { FizzBuzzManagementMBeanImpl } from "./management/FizzBuzzManagementMBea
 import { FactoryBeanFactoryImpl } from "./factories/FactoryBeanFactoryImpl.js";
 import { LoggingEnterpriseInterceptor } from "./interceptors/enterprise/LoggingEnterpriseInterceptor.js";
 import { TimingEnterpriseInterceptor } from "./interceptors/enterprise/TimingEnterpriseInterceptor.js";
-import { PassThroughResultTransformer } from "./transformers/PassThroughResultTransformer.js";
+import { NormalizingResultTransformerImpl } from "./transformers/NormalizingResultTransformerImpl.js";
 import { FizzBuzzSessionManagerImpl } from "./session/FizzBuzzSessionManagerImpl.js";
 import { AuditTrailSessionInterceptor } from "./interceptors/AuditTrailSessionInterceptor.js";
-import { PassThroughResultPostProcessor } from "./postprocessors/PassThroughResultPostProcessor.js";
+import { ValidatingResultPostProcessorImpl } from "./postprocessors/ValidatingResultPostProcessorImpl.js";
+import { FizzBuzzEnterpriseResultValidatorImpl } from "./validators/FizzBuzzEnterpriseResultValidatorImpl.js";
 import { ResultPostProcessorChainImpl } from "./postprocessors/ResultPostProcessorChainImpl.js";
 import { ModuloDivisibilityEvaluatorImpl } from "./evaluators/ModuloDivisibilityEvaluatorImpl.js";
 import { FizzBuzzOutputFormatterImpl } from "./formatters/FizzBuzzOutputFormatterImpl.js";
@@ -73,13 +74,15 @@ export class EnterpriseApplicationContextImpl implements IEnterpriseApplicationC
       new LoggingEnterpriseInterceptor(),
       new TimingEnterpriseInterceptor(),
     ];
-    this.resultTransformers = [new PassThroughResultTransformer()];
+    this.resultTransformers = [new NormalizingResultTransformerImpl()];
 
     this.sessionManager = new FizzBuzzSessionManagerImpl();
     this.sessionManager.registerInterceptor(new AuditTrailSessionInterceptor());
 
     this.resultPostProcessorChain = new ResultPostProcessorChainImpl();
-    this.resultPostProcessorChain.addPostProcessor(new PassThroughResultPostProcessor());
+    this.resultPostProcessorChain.addPostProcessor(
+      new ValidatingResultPostProcessorImpl(new FizzBuzzEnterpriseResultValidatorImpl()),
+    );
 
     const evaluator = serviceLocator.getDivisibilityEvaluator();
     this.divisibleByThreeSpec = new DivisibleBySpecification(3, evaluator);

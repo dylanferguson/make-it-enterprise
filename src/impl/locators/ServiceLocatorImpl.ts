@@ -25,7 +25,8 @@ import { FizzBuzzSessionManagerFactoryImpl } from "../factories/FizzBuzzSessionM
 import { AuditTrailSessionInterceptor } from "../interceptors/AuditTrailSessionInterceptor.js";
 import { SessionManagedResolverProxy } from "../proxies/SessionManagedResolverProxy.js";
 import { ResultPostProcessorChainImpl } from "../postprocessors/ResultPostProcessorChainImpl.js";
-import { PassThroughResultPostProcessor } from "../postprocessors/PassThroughResultPostProcessor.js";
+import { ValidatingResultPostProcessorImpl } from "../postprocessors/ValidatingResultPostProcessorImpl.js";
+import { FizzBuzzEnterpriseResultValidatorImpl } from "../validators/FizzBuzzEnterpriseResultValidatorImpl.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -64,7 +65,9 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     sessionManager.registerInterceptor(new AuditTrailSessionInterceptor());
 
     const postProcessorChain: IResultPostProcessorChain = new ResultPostProcessorChainImpl();
-    postProcessorChain.addPostProcessor(new PassThroughResultPostProcessor());
+    postProcessorChain.addPostProcessor(
+      new ValidatingResultPostProcessorImpl(new FizzBuzzEnterpriseResultValidatorImpl()),
+    );
 
     const valueResolver: ICompositeValueResolver = new SessionManagedResolverProxy(
       decoratedResolver,

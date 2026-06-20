@@ -1,8 +1,19 @@
 import { AbstractBaseModuloEvaluationStrategy } from "../../abstracts/AbstractBaseModuloEvaluationStrategy.js";
+import type { IRemainderOperatorDelegationService } from "../../contracts/IRemainderOperatorDelegationService.js";
+import { StandardRemainderOperatorDelegationServiceImpl } from "../services/StandardRemainderOperatorDelegationServiceImpl.js";
 
 export class StandardRemainderModuloEvaluationStrategyImpl extends AbstractBaseModuloEvaluationStrategy {
-  private static readonly STRATEGY_VERSION = "1.1.0-RELEASE";
+  private static readonly STRATEGY_VERSION = "1.2.0-RELEASE";
   private static readonly STRATEGY_NAME = "StandardRemainderModuloEvaluationStrategy";
+  private readonly remainderOperatorDelegationService: IRemainderOperatorDelegationService;
+
+  constructor(
+    remainderOperatorDelegationService?: IRemainderOperatorDelegationService,
+  ) {
+    super();
+    this.remainderOperatorDelegationService =
+      remainderOperatorDelegationService ?? new StandardRemainderOperatorDelegationServiceImpl();
+  }
 
   override evaluateModulo(dividend: number, divisor: number): number {
     return this.templateMethodEvaluate(dividend, divisor);
@@ -24,7 +35,10 @@ export class StandardRemainderModuloEvaluationStrategyImpl extends AbstractBaseM
     truncatedDividend: number,
     truncatedDivisor: number,
   ): number {
-    return truncatedDividend % truncatedDivisor;
+    return this.remainderOperatorDelegationService.computeRemainder(
+      truncatedDividend,
+      truncatedDivisor,
+    );
   }
 
   protected override postProcessResult(
