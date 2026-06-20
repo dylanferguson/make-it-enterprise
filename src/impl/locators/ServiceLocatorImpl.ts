@@ -83,6 +83,7 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
 
     const resolverDecoratorChain = new ValueResolverDecoratorChainBuilder();
     const decoratedResolver: ICompositeValueResolver = resolverDecoratorChain
+      .withPolicyEnforcement(true)
       .withCaching(true)
       .withLogging(false)
       .withValidation(true)

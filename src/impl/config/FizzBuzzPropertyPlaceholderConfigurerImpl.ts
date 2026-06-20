@@ -25,5 +25,8 @@ export class FizzBuzzPropertyPlaceholderConfigurerImpl extends AbstractBasePrope
     this.properties.set("fizzbuzz.transaction.timeout.ms", "30000");
     this.properties.set("fizzbuzz.memento.history.size", "100");
     this.properties.set("fizzbuzz.deployment.descriptor.path", "/META-INF/fizzbuzz-deployment.xml");
+    this.properties.set("fizzbuzz.policy.enforcement.enabled", "true");
+    this.properties.set("fizzbuzz.policy.max.computation.value", "2147483647");
+    this.properties.set("fizzbuzz.policy.decision.point.name", "FizzBuzzComputationPolicyDecisionPoint");
   }
 }
