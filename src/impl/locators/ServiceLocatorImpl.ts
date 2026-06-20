@@ -36,6 +36,7 @@ import { StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean } fro
 import { SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory } from "../factories/SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.js";
 import { FizzBuzzExpressionRuleSetFactoryBeanFactory } from "../factories/FizzBuzzExpressionRuleSetFactoryBeanFactory.js";
 import type { IFizzBuzzExpressionEvaluator } from "../../contracts/IFizzBuzzExpressionEvaluator.js";
+import { SpecificationMediationEnforcingDivisibilityEvaluatorDecorator } from "../../patterns/SpecificationMediationEnforcingDivisibilityEvaluatorDecorator.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -61,7 +62,11 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     const registry: IStrategyRegistry = new StrategyRegistryImpl();
     const visitor = new DivisibilityCheckVisitor(strategyProvider);
     const outputFormatter: IFizzBuzzOutputFormatter = new FizzBuzzOutputFormatterImpl();
-    const evaluator: IDivisibilityEvaluator = new ModuloDivisibilityEvaluatorImpl(strategyProvider);
+    const baseEvaluator: IDivisibilityEvaluator = new ModuloDivisibilityEvaluatorImpl(strategyProvider);
+    const evaluator: IDivisibilityEvaluator = new SpecificationMediationEnforcingDivisibilityEvaluatorDecorator(
+      baseEvaluator,
+      null,
+    );
 
     const divisibilityStrategyProvider: IDivisibilityStrategyProvider =
       DivisibilityStrategyProviderFactoryBean.createProvider(visitor, strategyProvider);
