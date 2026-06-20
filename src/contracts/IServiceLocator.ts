@@ -4,6 +4,7 @@ import type { IFizzBuzzStrategyFactory } from "./IFizzBuzzStrategyFactory.js";
 import type { ICompositeValueResolver } from "./ICompositeValueResolver.js";
 import type { IRangeCalculator } from "./IRangeCalculator.js";
 import type { IModuloEvaluationStrategyProvider } from "./IModuloEvaluationStrategyProvider.js";
+import type { IModuloArithmeticStrategyProvider } from "./IModuloArithmeticStrategyProvider.js";
 
 export interface IServiceLocator {
   getDivisibilityEvaluator(): IDivisibilityEvaluator;
@@ -12,4 +13,5 @@ export interface IServiceLocator {
   getValueResolver(): ICompositeValueResolver;
   getRangeCalculator(): IRangeCalculator;
   getModuloEvaluationStrategyProvider(): IModuloEvaluationStrategyProvider;
+  getModuloArithmeticStrategyProvider(): IModuloArithmeticStrategyProvider;
 }

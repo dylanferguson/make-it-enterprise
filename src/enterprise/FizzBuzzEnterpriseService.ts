@@ -8,6 +8,11 @@ import { RetryValueResolverDecorator } from "../patterns/RetryValueResolverDecor
 import { FallbackValueResolverDecorator } from "../patterns/FallbackValueResolverDecorator.js";
 import { SessionManagedResolverProxy } from "../impl/proxies/SessionManagedResolverProxy.js";
 import type { ICompositeValueResolver } from "../contracts/ICompositeValueResolver.js";
+import { XmlDeploymentDescriptorReaderImpl } from "../impl/descriptors/XmlDeploymentDescriptorReaderImpl.js";
+import { DefaultStrategySelectorFactoryImpl } from "../impl/factories/DefaultStrategySelectorFactoryImpl.js";
+import { FizzBuzzTransactionManagerImpl } from "../impl/transactions/FizzBuzzTransactionManagerImpl.js";
+import { FizzBuzzServiceHomeImpl } from "../impl/homes/FizzBuzzServiceHomeImpl.js";
+import { ModuloArithmeticStrategyProviderImpl } from "../impl/providers/ModuloArithmeticStrategyProviderImpl.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -20,6 +25,17 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
       const moduloProvider = serviceLocator.getModuloEvaluationStrategyProvider();
       const healthIndicator = new FizzBuzzHealthIndicatorImpl(moduloProvider);
       healthAggregator.registerIndicator(healthIndicator);
+
+      const deploymentDescriptorReader = new XmlDeploymentDescriptorReaderImpl(
+        moduloProvider,
+      );
+      const strategyProvider =
+        serviceLocator.getModuloArithmeticStrategyProvider() as ModuloArithmeticStrategyProviderImpl;
+      deploymentDescriptorReader.configureFromDescriptor(strategyProvider);
+
+      const selectorFactory = new DefaultStrategySelectorFactoryImpl(strategyProvider);
+      const strategySelector = selectorFactory.createSelector("DEFAULT");
+      strategyProvider.setStrategySelector(strategySelector);
 
       const enterpriseContext = new EnterpriseApplicationContextImpl(
         serviceLocator,
@@ -70,8 +86,21 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
         },
       };
 
-      FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
+      const transactionManager = new FizzBuzzTransactionManagerImpl();
+      const serviceHome = new FizzBuzzServiceHomeImpl(
         daoWrappingResolver,
+        transactionManager,
+      );
+
+      const managedBean = serviceHome.create();
+
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
+        managedBean.getValueResolver(),
+        serviceHome,
+        transactionManager,
+        deploymentDescriptorReader,
+        selectorFactory,
+        strategySelector,
       );
     }
     return FizzBuzzEnterpriseServiceFactoryBeanFactory.instance;
@@ -84,11 +113,26 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 
 export class FizzBuzzEnterpriseService {
   private readonly valueResolver: ICompositeValueResolver;
+  private readonly serviceHome: object | null;
+  private readonly transactionManager: object | null;
+  private readonly deploymentDescriptorReader: object | null;
+  private readonly selectorFactory: object | null;
+  private readonly strategySelector: object | null;
 
   constructor(
     valueResolver: ICompositeValueResolver,
+    serviceHome: object | null = null,
+    transactionManager: object | null = null,
+    deploymentDescriptorReader: object | null = null,
+    selectorFactory: object | null = null,
+    strategySelector: object | null = null,
   ) {
     this.valueResolver = valueResolver;
+    this.serviceHome = serviceHome;
+    this.transactionManager = transactionManager;
+    this.deploymentDescriptorReader = deploymentDescriptorReader;
+    this.selectorFactory = selectorFactory;
+    this.strategySelector = strategySelector;
   }
 
   resolveValue(value: number): string {

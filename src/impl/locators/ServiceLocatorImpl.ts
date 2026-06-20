@@ -33,6 +33,7 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private moduloEvaluationStrategyFactoryBean: ReturnType<
     typeof ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean
   > | null = null;
+  private moduloArithmeticStrategyProvider: ModuloArithmeticStrategyProviderImpl | null = null;
 
   override initialize(): void {
     this.moduloEvaluationStrategyFactoryBean =
@@ -41,8 +42,8 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
       );
     const evaluationStrategyProvider: IModuloEvaluationStrategyProvider =
       this.moduloEvaluationStrategyFactoryBean.createProvider();
-    const strategyProvider: IModuloArithmeticStrategyProvider =
-      new ModuloArithmeticStrategyProviderImpl(evaluationStrategyProvider);
+    this.moduloArithmeticStrategyProvider = new ModuloArithmeticStrategyProviderImpl(evaluationStrategyProvider);
+    const strategyProvider: IModuloArithmeticStrategyProvider = this.moduloArithmeticStrategyProvider;
     const registry: IStrategyRegistry = new StrategyRegistryImpl();
     const visitor = new DivisibilityCheckVisitor(strategyProvider);
     const outputFormatter: IFizzBuzzOutputFormatter = new FizzBuzzOutputFormatterImpl();
@@ -124,5 +125,15 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
       );
     }
     return this.moduloEvaluationStrategyFactoryBean.createProvider();
+  }
+
+  override getModuloArithmeticStrategyProvider(): IModuloArithmeticStrategyProvider {
+    this.ensureInitialized();
+    if (this.moduloArithmeticStrategyProvider === null) {
+      throw new Error(
+        "ModuloArithmeticStrategyProvider not initialized in ServiceLocatorImpl",
+      );
+    }
+    return this.moduloArithmeticStrategyProvider;
   }
 }
