@@ -96,6 +96,8 @@ import type { IDocumentAwareResolutionFacadeDecorator } from "./document/contrac
 import { FizzBuzzDocumentNodeImpl } from "./document/impl/FizzBuzzDocumentNodeImpl.js";
 import { NumberDocumentNodeImpl } from "./document/impl/NumberDocumentNodeImpl.js";
 import { UnresolvedDocumentNodeImpl } from "./document/impl/UnresolvedDocumentNodeImpl.js";
+import { ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory } from "./enterprisemodulo/factories/ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.js";
+import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from "./enterprisemodulo/contracts/IModularArithmeticDivisibilityResolutionMediationVisitor.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -288,6 +290,17 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         jmsInfrastructureInitialized = true;
       }
     }
+  }
+  {
+    const mediatorArch = ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.initializeArchitecture();
+    console.debug(
+      `[ModularArithmeticDivisibilityResolutionMediatorArchitecture] Mediation architecture initialized: ` +
+      `provider=[${mediatorArch.provider.getProviderName()} v${mediatorArch.provider.getProviderVersion()}], ` +
+      `registry=[${mediatorArch.registry.getRegistryName()} v${mediatorArch.registry.getRegistryVersion()}], ` +
+      `visitor=[${mediatorArch.visitor.getVisitorName()} v${mediatorArch.visitor.getVisitorVersion()}], ` +
+      `registeredMediators=[${mediatorArch.registry.getRegisteredDivisors().join(", ")}], ` +
+      `factoryBeanCount=[${mediatorArch.registry.getFactoryBeanCount()}]`,
+    );
   }
   {
     const specificationRegistry = DivisibilitySpecificationStrategyFactoryBeanFactory.createRegistry();

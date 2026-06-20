@@ -5,6 +5,8 @@ import type { IFizzBuzzComputationResponse } from "../../contracts/IFizzBuzzComp
 import { DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory } from "../../divisibility/factories/DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.js";
 import type { IDivisibilityModuloEvaluationStrategyProvider } from "../../divisibility/contracts/IDivisibilityModuloEvaluationStrategyProvider.js";
 import { DivisibilityModuloEvaluationChainHandlerVisitorImpl } from "../../divisibility/visitors/DivisibilityModuloEvaluationChainHandlerVisitorImpl.js";
+import { ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory } from "../../enterprisemodulo/factories/ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.js";
+import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from "../../enterprisemodulo/contracts/IModularArithmeticDivisibilityResolutionMediationVisitor.js";
 import { FizzBuzzComputationResponseImpl } from "../dto/FizzBuzzComputationResponseImpl.js";
 
 export class AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl
@@ -18,6 +20,7 @@ export class AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl
 
   private readonly divisibilityStrategyProvider: IDivisibilityModuloEvaluationStrategyProvider;
   private readonly chainVisitor: DivisibilityModuloEvaluationChainHandlerVisitorImpl;
+  private readonly mediationVisitor: IModularArithmeticDivisibilityResolutionMediationVisitor;
   private providerResolutionCount: number = 0;
 
   constructor(wrappedCommand: IFizzBuzzComputationCommand) {
@@ -25,6 +28,8 @@ export class AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl
     this.divisibilityStrategyProvider =
       DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.initializeProviderInfrastructure();
     this.chainVisitor = new DivisibilityModuloEvaluationChainHandlerVisitorImpl();
+    const architecture = ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.initializeArchitecture();
+    this.mediationVisitor = architecture.visitor;
     this.initializeBootstrapValidation();
   }
 
@@ -33,11 +38,12 @@ export class AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl
     this.providerResolutionCount++;
 
     let resolvedByDivisibilityProvider = false;
-    if (value % 3 === 0 || value % 5 === 0) {
+    if (this.mediationVisitor.visitMediatorEvaluation(value, 3) ||
+        this.mediationVisitor.visitMediatorEvaluation(value, 5)) {
       const divisors: number[] = [];
-      if (value % 3 === 0) divisors.push(3);
-      if (value % 5 === 0) divisors.push(5);
-      if (value % 15 === 0) divisors.push(15);
+      if (this.mediationVisitor.visitMediatorEvaluation(value, 3)) divisors.push(3);
+      if (this.mediationVisitor.visitMediatorEvaluation(value, 5)) divisors.push(5);
+      if (this.mediationVisitor.visitMediatorEvaluation(value, 15)) divisors.push(15);
 
       for (const divisor of divisors) {
         const factoryBean = this.divisibilityStrategyProvider.resolveFactoryBean(divisor);
@@ -107,12 +113,14 @@ export class AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl
   private initializeBootstrapValidation(): void {
     const registeredDivisors = this.divisibilityStrategyProvider.getRegisteredDivisors();
     const chainVisitorName = this.chainVisitor.getVisitorName();
+    const mediationVisitorName = this.mediationVisitor.getVisitorName();
     console.debug(
       `[${AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl.DECORATOR_NAME} v${AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl.DECORATOR_VERSION}] ` +
       `Bootstrap validation complete: ` +
       `provider=[${this.divisibilityStrategyProvider.getProviderName()} v${this.divisibilityStrategyProvider.getProviderVersion()}], ` +
       `registeredDivisors=[${registeredDivisors.join(", ")}], ` +
-      `chainVisitor=[${chainVisitorName}]`,
+      `chainVisitor=[${chainVisitorName}], ` +
+      `mediationVisitor=[${mediationVisitorName}]`,
     );
   }
 }

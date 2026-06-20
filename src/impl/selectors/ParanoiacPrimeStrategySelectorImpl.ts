@@ -1,15 +1,20 @@
 import { AbstractBaseRemainderOperatorStrategySelector } from "../../abstracts/AbstractBaseRemainderOperatorStrategySelector.js";
 import type { IModuloArithmeticStrategy } from "../../contracts/IModuloArithmeticStrategy.js";
 import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
+import { ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory } from "../../enterprisemodulo/factories/ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.js";
+import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from "../../enterprisemodulo/contracts/IModularArithmeticDivisibilityResolutionMediationVisitor.js";
 
 export class ParanoiacPrimeStrategySelectorImpl extends AbstractBaseRemainderOperatorStrategySelector {
   private static readonly SELECTOR_NAME = "ParanoiacPrimeStrategySelector";
   private static readonly SELECTOR_VERSION = "1.0.0-PARANOIAC";
   private readonly strategyProvider: IModuloArithmeticStrategyProvider;
+  private readonly mediationVisitor: IModularArithmeticDivisibilityResolutionMediationVisitor;
 
   constructor(strategyProvider: IModuloArithmeticStrategyProvider) {
     super();
     this.strategyProvider = strategyProvider;
+    const architecture = ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.initializeArchitecture();
+    this.mediationVisitor = architecture.visitor;
   }
 
   override selectArithmeticStrategy(divisor: number): IModuloArithmeticStrategy {
@@ -36,9 +41,11 @@ export class ParanoiacPrimeStrategySelectorImpl extends AbstractBaseRemainderOpe
   private isPrime(value: number): boolean {
     if (value <= 1) return false;
     if (value <= 3) return true;
-    if (value % 2 === 0 || value % 3 === 0) return false;
+    if (this.mediationVisitor.visitMediatorEvaluation(value, 2) ||
+        this.mediationVisitor.visitMediatorEvaluation(value, 3)) return false;
     for (let i = 5; i * i <= value; i += 6) {
-      if (value % i === 0 || value % (i + 2) === 0) return false;
+      if (this.mediationVisitor.visitMediatorEvaluation(value, i) ||
+          this.mediationVisitor.visitMediatorEvaluation(value, i + 2)) return false;
     }
     return true;
   }
