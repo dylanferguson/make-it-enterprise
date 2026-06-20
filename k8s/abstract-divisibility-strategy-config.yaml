@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-abstract-divisibility-strategy-provider-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: abstract-divisibility-strategy-provider
+    version: "1.0.0"
+data:
+  provider-profile: "STANDARD_DSRP"
+  provider-version: "1.0.0-DSRP-ENTERPRISE"
+  evaluation-caching-enabled: "true"
+  registered-divisors: "3,5"
+  chain-of-responsibility-order: "5,3"
+  factory-bean-class-name: "ModuloEvaluationStrategyFactoryBeanImpl"
+  factory-bean-version-prefix: "1.0.0-MESFB-DIVISOR-"
+  chain-handler-name-prefix: "ChainHandlerForDivisor"
+  chain-handler-version-prefix: "1.0.0-CH-"
+  evaluator-name-prefix: "EvaluatorForDivisor"
+  evaluator-version-prefix: "1.0.0-EVAL-"
+  decorator-class: "DefaultAbstractDivisibilityStrategyAwareResolutionFacadeDecoratorImpl"
+  decorator-version: "1.0.0-ADS-DECORATOR"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-divisibility-strategy-factory-bean-registry
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: factory-bean-registry
+    version: "1.0.0"
+data:
+  factory-beans: |
+    [
+      { "divisor": 3, "factoryBeanName": "ModuloEvaluationStrategyFactoryBean[divisor=3]", "version": "1.0.0-MESFB-DIVISOR-3", "cachingEnabled": true },
+      { "divisor": 5, "factoryBeanName": "ModuloEvaluationStrategyFactoryBean[divisor=5]", "version": "1.0.0-MESFB-DIVISOR-5", "cachingEnabled": true }
+    ]
+  chain-handlers: |
+    [
+      { "divisor": 5, "name": "ChainHandlerForDivisor5", "version": "1.0.0-CH-5", "nextHandler": "ChainHandlerForDivisor3" },
+      { "divisor": 3, "name": "ChainHandlerForDivisor3", "version": "1.0.0-CH-3", "nextHandler": null }
+    ]
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fizzbuzz-abstract-divisibility-strategy-alerts
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: strategy-alerts
+spec:
+  groups:
+    - name: fizzbuzz-abstract-divisibility-strategy
+      interval: 30s
+      rules:
+        - alert: DivisibleStrategyProviderNotInitialized
+          expr: fizzbuzz_abstract_divisibility_strategy_provider_initialized == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "AbstractDivisibilityStrategyProvider has not been initialized"
+            description: "The abstract divisibility strategy provider infrastructure was not initialized during bootstrap. FizzBuzz computation may fall back to the default resolution chain without abstract strategy evaluation."
+        - alert: FactoryBeanRegistrationMismatch
+          expr: abs(fizzbuzz_registered_factory_bean_count - fizzbuzz_expected_divisor_count) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Factory bean registration count does not match expected divisor count"
+            description: "The number of registered ModuloEvaluationStrategyFactoryBeans differs from the configured divisor count. Check the factory bean registry and divisor configuration."

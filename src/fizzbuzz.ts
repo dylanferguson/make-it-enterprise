@@ -130,6 +130,11 @@ import { EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory } from ".
 import { EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory } from "./transactions/factories/EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory.js";
 import { EnterpriseTransactionContextPropagatingDecoratorFactoryBeanFactory, TransactionPropagationDecoratorConfigurationProfile } from "./transactions/factories/EnterpriseTransactionContextPropagatingDecoratorFactoryBeanFactory.js";
 import type { IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator } from "./transactions/contracts/IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator.js";
+import { AbstractDivisibilityStrategyProviderFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/AbstractDivisibilityStrategyProviderFactoryBeanFactory.js";
+import { ModuloEvaluationStrategyFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/ModuloEvaluationStrategyFactoryBeanFactory.js";
+import { DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory.js";
+import { DivisibilityStrategyEvaluatorFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/DivisibilityStrategyEvaluatorFactoryBeanFactory.js";
+import { AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -484,6 +489,32 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
     }
   }
   {
+    if (!AbstractDivisibilityStrategyProviderFactoryBeanFactory.isInfrastructureInitialized()) {
+      const adsProvider =
+        AbstractDivisibilityStrategyProviderFactoryBeanFactory.initializeProviderInfrastructure();
+      const threeFactoryBean = ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBeanForDivisor(3);
+      const fiveFactoryBean = ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBeanForDivisor(5);
+      adsProvider.registerDivisibilityStrategyFactoryBean(3, threeFactoryBean);
+      adsProvider.registerDivisibilityStrategyFactoryBean(5, fiveFactoryBean);
+      const chain = DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory.initializeChain([5, 3]);
+      const threeEvaluator = DivisibilityStrategyEvaluatorFactoryBeanFactory.createEvaluator("ThreeEvaluator", "1.0.0-EVAL-3");
+      const fiveEvaluator = DivisibilityStrategyEvaluatorFactoryBeanFactory.createEvaluator("FiveEvaluator", "1.0.0-EVAL-5");
+      console.debug(
+        `[AbstractDivisibilityStrategyInfrastructure] Enterprise abstract divisibility strategy provider infrastructure initialized: ` +
+        `provider=[${adsProvider.getProviderName()} v${adsProvider.getProviderVersion()}], ` +
+        `registeredDivisors=[${adsProvider.getRegisteredDivisors().join(", ")}], ` +
+        `factoryBeanCount=[${adsProvider.getFactoryBeanCount()}], ` +
+        `chainHandler=[${chain.getHandlerName()} v${chain.getHandlerVersion()}], ` +
+        `chainHandlerNext=[${chain.getNextHandler()?.getHandlerName() ?? "null"}], ` +
+        `evaluators=[${DivisibilityStrategyEvaluatorFactoryBeanFactory.getRegisteredEvaluatorCount()}], ` +
+        `threeFactoryBean=[${threeFactoryBean.getFactoryBeanName()} v${threeFactoryBean.getFactoryBeanVersion()}], ` +
+        `fiveFactoryBean=[${fiveFactoryBean.getFactoryBeanName()} v${fiveFactoryBean.getFactoryBeanVersion()}], ` +
+        `threeChainHandler=[${threeFactoryBean.createChainHandler().getHandlerName()} v${threeFactoryBean.createChainHandler().getHandlerVersion()}], ` +
+        `fiveChainHandler=[${fiveFactoryBean.createChainHandler().getHandlerName()} v${fiveFactoryBean.createChainHandler().getHandlerVersion()}]`,
+      );
+    }
+  }
+  {
     const delegationOrchestratorFactoryFactory =
       EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.createFactoryFactory();
     if (!delegationOrchestratorFactoryFactory.createFactory().isOrchestratorInitialized()) {
@@ -816,7 +847,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     );
     const preEvaluationAware = wrapWithPreEvaluation(aopDecorator);
     const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
-    return wrapWithTransactionPropagation(stateMachineAware);
+    const txAwareDecorator = wrapWithTransactionPropagation(stateMachineAware);
+    return wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -831,7 +863,28 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   );
   const preEvaluationAware = wrapWithPreEvaluation(executionCoordinatorAwareFacade);
   const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
-  return wrapWithTransactionPropagation(stateMachineAware);
+  const transactionAware = wrapWithTransactionPropagation(stateMachineAware);
+  return wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
+}
+
+function wrapWithAbstractDivisibilityStrategyResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (AbstractDivisibilityStrategyProviderFactoryBeanFactory.isInfrastructureInitialized()) {
+    const adsDecorator =
+      AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+      );
+    console.debug(
+      `[AbstractDivisibilityStrategyAwareDecorator] Abstract divisibility strategy-aware facade decorator applied: ` +
+      `decorator=[${adsDecorator.getFacadeName()} v${adsDecorator.getFacadeVersion()}], ` +
+      `provider=[${adsDecorator.getAbstractDivisibilityStrategyProvider().getProviderName()} v${adsDecorator.getAbstractDivisibilityStrategyProvider().getProviderVersion()}], ` +
+      `registeredDivisors=[${adsDecorator.getAbstractDivisibilityStrategyProvider().getRegisteredDivisors().join(", ")}], ` +
+      `evaluationCount=[${adsDecorator.getDivisibilityEvaluationCount()}]`,
+    );
+    return adsDecorator;
+  }
+  return facade;
 }
 
 function wrapWithTransactionPropagation(
