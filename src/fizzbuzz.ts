@@ -174,6 +174,23 @@ import type { IEnterpriseClassificationAwareResolutionFacadeDecorator } from "./
 import { JaasSecurityInfrastructureProviderFactoryBean } from "./security/factories/JaasSecurityInfrastructureProviderFactoryBean.js";
 import { SecurityAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./security/factories/SecurityAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { ISecurityContext } from "./security/contracts/index.js";
+import {
+  EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory,
+} from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.js";
+import {
+  EnterpriseDivisibilityOrchestrationTemplateMethodFactoryBeanFactory,
+} from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationTemplateMethodFactoryBeanFactory.js";
+import {
+  EnterpriseDivisibilityOrchestrationInvokerFactoryBeanFactory,
+} from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationInvokerFactoryBeanFactory.js";
+import {
+  EnterpriseDivisibilityOrchestrationStrategyResolverFactoryBeanFactory,
+} from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationStrategyResolverFactoryBeanFactory.js";
+import {
+  EnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecoratorFactoryBeanFactory,
+} from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecorator } from "./enterprisedivisibilityorchestration/contracts/IEnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecorator.js";
+import type { IEnterpriseDivisibilityOrchestrationStrategyResolver } from "./enterprisedivisibilityorchestration/contracts/IEnterpriseDivisibilityOrchestrationStrategyResolver.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -782,7 +799,26 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `securityContext=[${securityCtx.getSecurityContextName()} v${securityCtx.getSecurityContextVersion()}], ` +
         `subject=[${subject.getSubjectDescriptor()}], ` +
         `callerPrincipal=[${securityCtx.getCallerPrincipal().getName()}], ` +
-        `roles=[${subject.getPrincipals().filter(p => p.getPrincipalType() === "FizzBuzzRole").map(p => p.getName()).join(", ")}]`,
+      `roles=[${subject.getPrincipals().filter(p => p.getPrincipalType() === "FizzBuzzRole").map(p => p.getName()).join(", ")}]`,
+    );
+    }
+  }
+  {
+    if (!EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor()) {
+      const bridgeImplementor =
+        EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.createImplementor();
+      const templateMethod =
+        EnterpriseDivisibilityOrchestrationTemplateMethodFactoryBeanFactory.initializeTemplateMethodInfrastructure(
+          bridgeImplementor,
+        );
+      const invoker = EnterpriseDivisibilityOrchestrationInvokerFactoryBeanFactory.createInvoker();
+      console.debug(
+        `[EnterpriseDivisibilityOrchestrationInfrastructure] Divisibilty orchestration pattern infrastructure initialized: ` +
+        `bridgeImplementor=[${bridgeImplementor.getImplementorName()} v${bridgeImplementor.getImplementorVersion()}], ` +
+        `templateMethod=[${templateMethod.getTemplateMethodName()} v${templateMethod.getTemplateMethodVersion()}], ` +
+        `invoker=[${invoker.getInvokerName()} v${invoker.getInvokerVersion()}], ` +
+        `bridgeReady=[${templateMethod.getBridgeImplementor() !== null}], ` +
+        `evaluationCount=[${(templateMethod as any).getEvaluationCount?.() ?? 0}]`,
       );
     }
   }
@@ -1061,7 +1097,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
-    return wrapWithJaasSecurityResolution(classificationWrapped);
+    const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
+    return wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1084,7 +1121,46 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
-    return wrapWithJaasSecurityResolution(classificationWrapped);
+    const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
+    return wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
+}
+
+function wrapWithEnterpriseDivisibilityOrchestration(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor() !== null) {
+    const invoker = EnterpriseDivisibilityOrchestrationInvokerFactoryBeanFactory.getInvoker()!;
+    const templateMethod =
+      EnterpriseDivisibilityOrchestrationTemplateMethodFactoryBeanFactory.getTemplateMethod()!;
+    const baseFacade = facade;
+    const strategyResolver =
+      EnterpriseDivisibilityOrchestrationStrategyResolverFactoryBeanFactory.createStrategyResolver(
+        invoker,
+        baseFacade,
+        templateMethod,
+      );
+    const threeCommand = strategyResolver.resolveCommandForDivisor(3);
+    const fiveCommand = strategyResolver.resolveCommandForDivisor(5);
+    invoker.setCommand(threeCommand);
+    const orchestrationDecorator: IEnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecorator =
+      EnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        baseFacade,
+        invoker,
+        true,
+      );
+    console.debug(
+      `[EnterpriseDivisibilityOrchestrationDecorator] Divisibility orchestration decorator applied: ` +
+      `decorator=[${orchestrationDecorator.getDecoratorName()} v${orchestrationDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${orchestrationDecorator.getWrappedFacade().getFacadeName()}], ` +
+      `invoker=[${invoker.getInvokerName()} v${invoker.getInvokerVersion()}], ` +
+      `templateMethod=[${templateMethod.getTemplateMethodName()} v${templateMethod.getTemplateMethodVersion()}], ` +
+      `bridgeImplementor=[${templateMethod.getBridgeImplementor()!.getImplementorName()} v${templateMethod.getBridgeImplementor()!.getImplementorVersion()}], ` +
+      `registeredCommands=[3:${threeCommand.getCommandDescriptor()}, 5:${fiveCommand.getCommandDescriptor()}], ` +
+      `decoratorEnabled=[${orchestrationDecorator.isDecoratorEnabled()}]`,
+    );
+    return orchestrationDecorator;
+  }
+  return facade;
 }
 
 function wrapWithEnterpriseClassificationResolution(
