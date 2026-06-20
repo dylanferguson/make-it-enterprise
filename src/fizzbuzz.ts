@@ -7,6 +7,9 @@ import {
 import type {
   IFizzBuzzSingleValueResolutionFacade,
 } from "./contracts/IFizzBuzzSingleValueResolutionFacade.js";
+import type {
+  IValidationAwareResolutionFacadeDecorator,
+} from "./contracts/IValidationAwareResolutionFacadeDecorator.js";
 import {
   FizzBuzzResolutionFacadeConfigurationProfile,
 } from "./impl/factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
@@ -17,6 +20,9 @@ import { StandardEnterpriseFizzBuzzSlaMonitorImpl } from "./impl/slo/StandardEnt
 import { EnterpriseServiceBusChannelImpl } from "./impl/bus/EnterpriseServiceBusChannelImpl.js";
 import { StandardEnterpriseServiceBusMessageRouterImpl } from "./impl/bus/StandardEnterpriseServiceBusMessageRouterImpl.js";
 import { DefaultEnterpriseServiceBusChannelBindingImpl } from "./impl/bus/DefaultEnterpriseServiceBusChannelBindingImpl.js";
+import { ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/validation/DivisibilityValidationEnforcementGateFactoryBeanFactory.js";
+import { DefaultValidationEnforcementMetricsCollectorImpl } from "./impl/validation/DefaultValidationEnforcementMetricsCollectorImpl.js";
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   if (!EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
@@ -31,7 +37,16 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   if (!DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.isChainInitialized()) {
     DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.buildSingletonFallbackComputationChain(true);
   }
+  if (!DivisibilityValidationEnforcementGateFactoryBeanFactory.getValidationGate()) {
+    DivisibilityValidationEnforcementGateFactoryBeanFactory.createValidationGate("STANDARD_STRICT");
+  }
   {
+    const metricsCollector = new DefaultValidationEnforcementMetricsCollectorImpl();
+    console.debug(
+      `[ValidationEnforcementInfrastructure] Validation gate initialized: ` +
+      `metricsCollector=[${metricsCollector.getMetricsCollectorName()} v${metricsCollector.getMetricsCollectorVersion()}], ` +
+      `gateType=[${DivisibilityValidationEnforcementGateFactoryBeanFactory.getValidationGate()?.getGateImplementationType() ?? "UNKNOWN"}]`,
+    );
     const slaMonitor = new StandardEnterpriseFizzBuzzSlaMonitorImpl(50);
     const busChannel = new EnterpriseServiceBusChannelImpl("fizzbuzz-computation-channel", "COMPUTATION_EVENT_CHANNEL", true);
     const busRouter = new StandardEnterpriseServiceBusMessageRouterImpl();
@@ -49,17 +64,29 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
 })();
 
 function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
+  let baseFacade: IFizzBuzzSingleValueResolutionFacade;
   if (BOOTSTRAP_GATE_INITIALIZED) {
     const context = FizzBuzzEnterpriseApplicationContextFactoryBean.getApplicationContext();
     if (context !== null && context.isInitialized()) {
-      return FizzBuzzResolutionFacadeFactoryBeanFactory.createResolutionFacade(
+      baseFacade = FizzBuzzResolutionFacadeFactoryBeanFactory.createResolutionFacade(
+        FizzBuzzResolutionFacadeConfigurationProfile.STANDARD,
+      );
+    } else {
+      baseFacade = FizzBuzzResolutionFacadeFactoryBeanFactory.createResolutionFacade(
         FizzBuzzResolutionFacadeConfigurationProfile.STANDARD,
       );
     }
+  } else {
+    baseFacade = FizzBuzzResolutionFacadeFactoryBeanFactory.createResolutionFacade(
+      FizzBuzzResolutionFacadeConfigurationProfile.STANDARD,
+    );
   }
-  return FizzBuzzResolutionFacadeFactoryBeanFactory.createResolutionFacade(
-    FizzBuzzResolutionFacadeConfigurationProfile.STANDARD,
-  );
+  const validationAwareDecorator: IValidationAwareResolutionFacadeDecorator =
+    ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      baseFacade,
+      "ENABLED_STRICT",
+    );
+  return validationAwareDecorator;
 }
 
 export function fizzBuzzValue(value: number): string {
