@@ -14,6 +14,9 @@ import { CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl } from ".
 import { CompositeStrategyTreeFactoryBeanFactory, CompositeStrategyTreeConfigurationProfile } from "./CompositeStrategyTreeFactoryBeanFactory.js";
 import { InMemoryComputationEventStoreImpl } from "../stores/InMemoryComputationEventStoreImpl.js";
 import { EventSourcingFizzBuzzComputationCommandDecoratorImpl } from "../../patterns/EventSourcingFizzBuzzComputationCommandDecoratorImpl.js";
+import { StrategySelectorAwareFizzBuzzComputationCommandDecoratorImpl } from "../decorators/StrategySelectorAwareFizzBuzzComputationCommandDecoratorImpl.js";
+import { FlyweightManagedFizzBuzzComputationCommandDecoratorImpl } from "../decorators/FlyweightManagedFizzBuzzComputationCommandDecoratorImpl.js";
+import { EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory } from "./EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
 import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
@@ -139,6 +142,21 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
         compositeStrategyTree,
       );
 
+    const strategySelectorAwareCommand: IFizzBuzzComputationCommand =
+      new StrategySelectorAwareFizzBuzzComputationCommandDecoratorImpl(
+        compositeAwareCommand,
+      );
+
+    const flyweightManagedCommand: IFizzBuzzComputationCommand =
+      new FlyweightManagedFizzBuzzComputationCommandDecoratorImpl(
+        strategySelectorAwareCommand,
+      );
+
+    const decoratorStack =
+      EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory.createDecoratorStack();
+    const stackedCommand: IFizzBuzzComputationCommand =
+      decoratorStack.buildDecoratorStack(flyweightManagedCommand);
+
     const computationTemplate =
       FizzBuzzComputationTemplateFactoryBean.createTemplate();
 
@@ -148,13 +166,13 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
     const delegateFacade = new FizzBuzzSingleValueResolutionFacadeImpl(
       requestBuilder,
       commandInvoker,
-      compositeAwareCommand,
+      stackedCommand,
       computationTemplate,
     );
 
     return EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.createSelectionFacade(
       delegateFacade,
-      compositeAwareCommand,
+      stackedCommand,
     );
   }
 
