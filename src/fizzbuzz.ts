@@ -23,6 +23,7 @@ import { EnterpriseServiceBusChannelImpl } from "./impl/bus/EnterpriseServiceBus
 import { StandardEnterpriseServiceBusMessageRouterImpl } from "./impl/bus/StandardEnterpriseServiceBusMessageRouterImpl.js";
 import { DefaultEnterpriseServiceBusChannelBindingImpl } from "./impl/bus/DefaultEnterpriseServiceBusChannelBindingImpl.js";
 import { ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { DivisibilityEvaluationSupervisionChainFactoryBean } from "./impl/factories/DivisibilityEvaluationSupervisionChainFactoryBean.js";
 import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/validation/DivisibilityValidationEnforcementGateFactoryBeanFactory.js";
 import { DefaultValidationEnforcementMetricsCollectorImpl } from "./impl/validation/DefaultValidationEnforcementMetricsCollectorImpl.js";
 import { MessagePropertyResolutionChainFactoryBeanFactory } from "./impl/factories/MessagePropertyResolutionChainFactoryBeanFactory.js";
@@ -116,6 +117,15 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `[DivisibilityResolutionInfrastructure] Enterprise divisibility resolution facade initialized: ` +
       `facade=[${divisibilityFacade.getFacadeName()} v${divisibilityFacade.getFacadeVersion()}], ` +
       `strategy=[${divisibilityFacade.getResolutionStrategyDescription()}]`,
+    );
+  }
+  {
+    const supervisionChain = DivisibilityEvaluationSupervisionChainFactoryBean.createSupervisionChain(true, true, true);
+    console.debug(
+      `[DivisibilityEvaluationSupervisionInfrastructure] Enterprise divisibility evaluation supervision chain initialized: ` +
+      `chain=[${supervisionChain.getChainName()} v${supervisionChain.getChainVersion()}], ` +
+      `registeredLinks=[${supervisionChain.getRegisteredLinkCount()}], ` +
+      `factoryBean=[${DivisibilityEvaluationSupervisionChainFactoryBean.getFactoryBeanName()} v${DivisibilityEvaluationSupervisionChainFactoryBean.getFactoryBeanVersion()}]`,
     );
   }
   {

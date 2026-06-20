@@ -5,6 +5,8 @@ import { ServiceLocatorModuloDivisibilityStrategyProviderImpl } from "../provide
 import { ModuloBasedDivisibilityStrategyResolutionHandler } from "../handlers/ModuloBasedDivisibilityStrategyResolutionHandler.js";
 import { CatchAllDivisibilityStrategyResolutionHandler } from "../handlers/CatchAllDivisibilityStrategyResolutionHandler.js";
 import { FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory } from "./FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory.js";
+import { DivisibilityEvaluationSupervisionChainFactoryBean } from "./DivisibilityEvaluationSupervisionChainFactoryBean.js";
+import { SupervisionChainBackedDivisibilityStrategyResolutionHandler } from "../handlers/SupervisionChainBackedDivisibilityStrategyResolutionHandler.js";
 
 export class DivisibilityStrategyProviderFactoryBean {
   private static readonly FACTORY_BEAN_NAME = "DivisibilityStrategyProviderFactoryBean";
@@ -18,17 +20,23 @@ export class DivisibilityStrategyProviderFactoryBean {
 
     const provider = new ServiceLocatorModuloDivisibilityStrategyProviderImpl();
 
+    const supervisionChain = DivisibilityEvaluationSupervisionChainFactoryBean.createSupervisionChain(true, true, true);
+    const supervisionHandler = new SupervisionChainBackedDivisibilityStrategyResolutionHandler(supervisionChain);
+
     const moduloHandler = new ModuloBasedDivisibilityStrategyResolutionHandler(
       visitor,
       strategyProvider,
     );
     const catchAllHandler = new CatchAllDivisibilityStrategyResolutionHandler();
 
+    provider.registerResolutionHandler(supervisionHandler);
     provider.registerResolutionHandler(moduloHandler);
     provider.registerResolutionHandler(catchAllHandler);
 
     console.debug(
-      `[${DivisibilityStrategyProviderFactoryBean.FACTORY_BEAN_NAME}] ServiceLocator-aware provider created with ${provider.getProviderName()} (${provider.getProviderVersion()})`,
+      `[${DivisibilityStrategyProviderFactoryBean.FACTORY_BEAN_NAME}] ServiceLocator-aware provider created with ${provider.getProviderName()} (${provider.getProviderVersion()}) ` +
+      `supervisionChain=[${supervisionChain.getChainName()} v${supervisionChain.getChainVersion()}] ` +
+      `supervisionLinks=[${supervisionChain.getRegisteredLinkCount()}]`,
     );
 
     return provider;
