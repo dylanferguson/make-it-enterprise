@@ -206,6 +206,14 @@ import { CompositeExpressionInterpreterFactoryBeanFactory } from "./compositeexp
 import { CompositeExpressionTreeFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionTreeFactoryBeanFactory.js";
 import { CompositeExpressionAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { ICompositeExpressionAwareResolutionFacadeDecorator } from "./compositeexpression/contracts/ICompositeExpressionAwareResolutionFacadeDecorator.js";
+import { FizzBuzzResolutionMediatorFactoryBeanFactory } from "./workflowmediator/factories/FizzBuzzResolutionMediatorFactoryBeanFactory.js";
+import { MediatorAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./workflowmediator/factories/MediatorAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IFizzBuzzResolutionMediator } from "./workflowmediator/contracts/IFizzBuzzResolutionMediator.js";
+import type { IMediatorAwareResolutionFacadeDecorator } from "./workflowmediator/contracts/IMediatorAwareResolutionFacadeDecorator.js";
+import { FizzBuzzComputationOriginatorFactoryBeanFactory } from "./workflowmemento/factories/FizzBuzzComputationOriginatorFactoryBeanFactory.js";
+import { FizzBuzzComputationCaretakerFactoryBeanFactory } from "./workflowmemento/factories/FizzBuzzComputationCaretakerFactoryBeanFactory.js";
+import type { IFizzBuzzComputationOriginator } from "./workflowmemento/contracts/IFizzBuzzComputationOriginator.js";
+import type { IFizzBuzzComputationCaretaker } from "./workflowmemento/contracts/IFizzBuzzComputationCaretaker.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -838,6 +846,16 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `initialized=[${EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.isFactoryBeanInitialized()}]`,
     );
   }
+  if (!MediatorAwareResolutionFacadeDecoratorFactoryBeanFactory.getDecorator()) {
+    const mediator = FizzBuzzResolutionMediatorFactoryBeanFactory.getMediator();
+    if (mediator !== null) {
+      console.debug(
+        `[MediationDecoratorInfrastructure] Mediator-aware resolution facade decorator initialized: ` +
+        `mediator=[${mediator.getMediatorName()} v${mediator.getMediatorVersion()}], ` +
+        `registeredStrategies=[${mediator.getRegisteredStrategyNames().join(", ")}]`,
+      );
+    }
+  }
   if (!CompositeExpressionVisitorFactoryBeanFactory.isFactoryBeanInitialized()) {
     const ceVisitor = CompositeExpressionVisitorFactoryBeanFactory.createVisitor();
     const ceInterpreter = CompositeExpressionInterpreterFactoryBeanFactory.createInterpreter(ceVisitor);
@@ -867,6 +885,34 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `invoker=[${invoker.getInvokerName()} v${invoker.getInvokerVersion()}], ` +
         `bridgeReady=[${templateMethod.getBridgeImplementor() !== null}], ` +
         `evaluationCount=[${(templateMethod as any).getEvaluationCount?.() ?? 0}]`,
+      );
+    }
+  }
+  {
+    if (!FizzBuzzResolutionMediatorFactoryBeanFactory.isMediatorInitialized()) {
+      const mediator = FizzBuzzResolutionMediatorFactoryBeanFactory.createMediator();
+      const originator = FizzBuzzComputationOriginatorFactoryBeanFactory.createOriginator();
+      const caretaker = FizzBuzzComputationCaretakerFactoryBeanFactory.createCaretaker();
+      const adsProvider = AbstractDivisibilityStrategyProviderFactoryBeanFactory.getProvider();
+      if (adsProvider !== null) {
+        const registeredDivisors = adsProvider.getRegisteredDivisors();
+        for (const divisor of registeredDivisors) {
+          const factoryBean = adsProvider.resolveDivisibilityStrategyFactoryBean(divisor);
+          const chainHandler = factoryBean.createChainHandler();
+          mediator.registerResolutionStrategy(
+            `AbstractDivisibilityStrategy:${divisor}`,
+            (v: number) => chainHandler.evaluateDivisibility(v, divisor, (_w: number, _d: number) => false) ? "" : "",
+          );
+        }
+      }
+      console.debug(
+        `[WorkflowMediationInfrastructure] Enterprise workflow mediation infrastructure initialized: ` +
+        `mediator=[${mediator.getMediatorName()} v${mediator.getMediatorVersion()}], ` +
+        `registeredStrategies=[${mediator.getRegisteredStrategyNames().join(", ")}], ` +
+        `strategyCount=[${mediator.getMediationStrategyCount()}], ` +
+        `originator=[${originator.getOriginatorName()} v${originator.getOriginatorVersion()}], ` +
+        `caretaker=[${caretaker.getCaretakerName()} v${caretaker.getCaretakerVersion()}], ` +
+        `mementoCount=[${caretaker.getMementoCount()}]`,
       );
     }
   }
@@ -1149,7 +1195,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
-    return wrapWithFormatterBridgeResolution(proxied);
+    const mediated = wrapWithMediatorResolution(proxied);
+    return wrapWithFormatterBridgeResolution(mediated);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1176,7 +1223,55 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
-    return wrapWithFormatterBridgeResolution(proxied);
+    const mediated = wrapWithMediatorResolution(proxied);
+    return wrapWithFormatterBridgeResolution(mediated);
+}
+
+let mediatorDecorator: IMediatorAwareResolutionFacadeDecorator | null = null;
+
+function wrapWithMediatorResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (FizzBuzzResolutionMediatorFactoryBeanFactory.isMediatorInitialized()) {
+    if (mediatorDecorator === null) {
+      const mediator = FizzBuzzResolutionMediatorFactoryBeanFactory.getMediator()!;
+      const computationStateMachine = ComputationStateMachineFactoryBeanFactory.getStateMachine();
+      if (computationStateMachine !== null) {
+        mediator.registerResolutionStrategy(
+          "ComputationStateMachine",
+          (v: number) => {
+            const history = computationStateMachine.getStateTransitionHistory();
+            return history.length > 0 ? "" : "";
+          },
+        );
+      }
+      mediatorDecorator = MediatorAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        mediator,
+        true,
+      );
+    }
+    const originator = FizzBuzzComputationOriginatorFactoryBeanFactory.getOriginator();
+    const caretaker = FizzBuzzComputationCaretakerFactoryBeanFactory.getCaretaker();
+    if (originator !== null && caretaker !== null) {
+      console.debug(
+        `[MediatorDecorator] Mediator-aware resolution facade decorator applying memento lifecycle: ` +
+        `originator=[${originator.getOriginatorName()}], ` +
+        `caretaker=[${caretaker.getCaretakerName()}], ` +
+        `savedSnapshots=[${caretaker.getMementoCount()}]`,
+      );
+    }
+    console.debug(
+      `[MediatorDecorator] Mediator-aware resolution facade decorator applied: ` +
+      `decorator=[${mediatorDecorator.getDecoratorName()} v${mediatorDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${mediatorDecorator.getWrappedFacade().getFacadeName()}], ` +
+      `mediator=[${mediatorDecorator.getMediator().getMediatorName()} v${mediatorDecorator.getMediator().getMediatorVersion()}], ` +
+      `registeredStrategies=[${mediatorDecorator.getMediator().getRegisteredStrategyNames().join(", ")}], ` +
+      `decoratorEnabled=[${mediatorDecorator.isDecoratorEnabled()}]`,
+    );
+    return mediatorDecorator;
+  }
+  return facade;
 }
 
 function wrapWithCompositeExpressionResolution(
@@ -1576,7 +1671,14 @@ function resolveInnerSingleValue(value: number): string {
   }
   const governanceFacade = resolveGovernanceEnforcementFacade();
   const facade = resolveResolutionFacade();
-  return governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
+  const result = governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
+  const originator = FizzBuzzComputationOriginatorFactoryBeanFactory.getOriginator();
+  const caretaker = FizzBuzzComputationCaretakerFactoryBeanFactory.getCaretaker();
+  if (originator !== null && caretaker !== null) {
+    const memento = originator.createMemento(value, result);
+    caretaker.captureMemento(memento);
+  }
+  return result;
 }
 
 function resolveBuilderPipelineProduct(): IFizzBuzzComputationPipelineProduct {
