@@ -219,6 +219,14 @@ import { EnterpriseDivisibilityEvaluationInterceptorAdapterConfigurerFactoryBean
 import { EnterpriseDivisibilityEvaluationInterceptorAdapterVisitorFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterVisitorFactoryBeanFactory.js";
 import { EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IEnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecorator } from "./divisibilityinterceptoradapter/contracts/IEnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecorator.js";
+import { ResultValidationSpecificationFactoryBeanFactory } from "./resultvalidationspecification/factories/ResultValidationSpecificationFactoryBeanFactory.js";
+import { ResultValidationSpecificationRegistryFactoryBeanFactory } from "./resultvalidationspecification/factories/ResultValidationSpecificationRegistryFactoryBeanFactory.js";
+import type { IEnterpriseFizzBuzzResultValidationSpecificationRegistry } from "./resultvalidationspecification/contracts/IEnterpriseFizzBuzzResultValidationSpecificationRegistry.js";
+import type { IEnterpriseFizzBuzzResultValidationSpecificationFactory } from "./resultvalidationspecification/contracts/IEnterpriseFizzBuzzResultValidationSpecificationFactory.js";
+import type { IEnterpriseFizzBuzzResultValidationSpecificationVisitor } from "./resultvalidationspecification/contracts/IEnterpriseFizzBuzzResultValidationSpecificationVisitor.js";
+import { ResultValidationSpecificationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./resultvalidationspecification/factories/ResultValidationSpecificationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IResultValidationSpecificationAwareResolutionFacadeDecorator } from "./resultvalidationspecification/contracts/IResultValidationSpecificationAwareResolutionFacadeDecorator.js";
+import { DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl } from "./resultvalidationspecification/impl/DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -948,6 +956,52 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!ResultValidationSpecificationRegistryFactoryBeanFactory.isInfrastructureInitialized()) {
+      const registry = ResultValidationSpecificationRegistryFactoryBeanFactory.initializeInfrastructure();
+      const factory = ResultValidationSpecificationFactoryBeanFactory.createFactory();
+      const alwaysValid = factory.createAlwaysValidSpecification();
+      const lengthSpec = factory.createLengthConstrainedSpecification(
+        "StandardFizzBuzzOutputLengthConstraint",
+        "1.0.0-LENGTH-8",
+        "Validates that FizzBuzz output does not exceed 8 characters",
+        8,
+        100,
+      );
+      const threeConsistencySpec = factory.createDivisibilityConsistencySpecification(
+        "DivisibleByThreeOutputConsistencySpecification",
+        "1.0.0-DIV3-CONSISTENCY",
+        "Validates that values divisible by 3 contain 'Fizz'",
+        3,
+        "Fizz",
+        80,
+      );
+      const fiveConsistencySpec = factory.createDivisibilityConsistencySpecification(
+        "DivisibleByFiveOutputConsistencySpecification",
+        "1.0.0-DIV5-CONSISTENCY",
+        "Validates that values divisible by 5 contain 'Buzz'",
+        5,
+        "Buzz",
+        80,
+      );
+      registry.registerSpecification(alwaysValid);
+      registry.registerSpecification(lengthSpec);
+      registry.registerSpecification(threeConsistencySpec);
+      registry.registerSpecification(fiveConsistencySpec);
+      const visitor = new DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl();
+      visitor.visitRegistry(registry);
+      console.debug(
+        `[EnterpriseResultValidationSpecificationInfrastructure] Enterprise result validation specification infrastructure initialized: ` +
+        `registry=[${registry.getRegistryName()} v${registry.getRegistryVersion()}], ` +
+        `factory=[${factory.getFactoryName()} v${factory.getFactoryVersion()}], ` +
+        `registeredSpecs=[${registry.getRegisteredSpecificationNames().join(", ")}], ` +
+        `specCount=[${registry.getRegisteredSpecificationCount()}], ` +
+        `visitor=[${visitor.getVisitorName()} v${visitor.getVisitorVersion()}], ` +
+        `visitCount=[${visitor.getVisitationCount()}], ` +
+        `visitedSpecNames=[${visitor.getVisitedSpecificationNames().join(", ")}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -1229,7 +1283,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
     const mediated = wrapWithMediatorResolution(proxied);
     const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
-    return wrapWithFormatterBridgeResolution(interceptorAdapted);
+    const validationSpecWrapped = wrapWithResultValidationSpecificationResolution(interceptorAdapted);
+    return wrapWithFormatterBridgeResolution(validationSpecWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1258,7 +1313,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
     const mediated = wrapWithMediatorResolution(proxied);
     const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
-    return wrapWithFormatterBridgeResolution(interceptorAdapted);
+    const validationSpecWrapped = wrapWithResultValidationSpecificationResolution(interceptorAdapted);
+    return wrapWithFormatterBridgeResolution(validationSpecWrapped);
 }
 
 let mediatorDecorator: IMediatorAwareResolutionFacadeDecorator | null = null;
@@ -1331,6 +1387,36 @@ function wrapWithInterceptorAdapterResolution(
       );
     }
     return interceptorAdapterDecorator;
+  }
+  return facade;
+}
+
+let validationSpecificationDecorator: IResultValidationSpecificationAwareResolutionFacadeDecorator | null = null;
+
+function wrapWithResultValidationSpecificationResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (ResultValidationSpecificationRegistryFactoryBeanFactory.isInfrastructureInitialized()) {
+    if (validationSpecificationDecorator === null) {
+      const registry = ResultValidationSpecificationRegistryFactoryBeanFactory.getRegistry()!;
+      validationSpecificationDecorator =
+        ResultValidationSpecificationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+          facade,
+          registry,
+          true,
+        );
+      console.debug(
+        `[EnterpriseResultValidationSpecificationDecorator] Enterprise result validation specification decorator applied: ` +
+        `decorator=[${validationSpecificationDecorator.getDecoratorName()} v${validationSpecificationDecorator.getDecoratorVersion()}], ` +
+        `wrappedFacade=[${validationSpecificationDecorator.getWrappedFacadeName()}], ` +
+        `registry=[${validationSpecificationDecorator.getValidationRegistry().getRegistryName()} v${validationSpecificationDecorator.getValidationRegistry().getRegistryVersion()}], ` +
+        `registeredSpecs=[${validationSpecificationDecorator.getValidationRegistry().getRegisteredSpecificationNames().join(", ")}], ` +
+        `specCount=[${validationSpecificationDecorator.getValidationRegistry().getRegisteredSpecificationCount()}], ` +
+        `decoratorEnabled=[${validationSpecificationDecorator.isDecoratorEnabled()}], ` +
+        `diagnostic=[${validationSpecificationDecorator.getDecoratorDiagnosticSummary()}]`,
+      );
+    }
+    return validationSpecificationDecorator;
   }
   return facade;
 }
