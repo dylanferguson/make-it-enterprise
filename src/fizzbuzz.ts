@@ -112,6 +112,10 @@ import { EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory
 import type { IPreEvaluationAwareResolutionFacadeDecorator } from "./computedoutcome/contracts/index.js";
 import { EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory } from "./outputcomposite/factories/EnterpriseOutputCompositeFactoryBeanFactory.js";
 import { JmxInfrastructureFactoryBeanFactory } from "./jmx/factories/JmxInfrastructureFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory } from "./resolutiondelegation/factories/EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.js";
+import { ResolutionDelegationVisitorFactoryBeanFactory } from "./resolutiondelegation/visitors/factories/ResolutionDelegationVisitorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory } from "./resolutiondelegation/factories/EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory.js";
+import { DefaultResolutionDelegationConfiguratorBuilderImpl } from "./resolutiondelegation/builders/impl/DefaultResolutionDelegationConfiguratorBuilderImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -435,6 +439,30 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `registry=[${compositeProvider.getRegistry()?.getRegistryName() ?? "N/A"} v${compositeProvider.getRegistry()?.getRegistryVersion() ?? "N/A"}], ` +
       `components=[${compositeProvider.getRegistry()?.getRegisteredComponentNames().join(", ") ?? "N/A"}]`,
     );
+  }
+  {
+    const delegationOrchestratorFactoryFactory =
+      EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.createFactoryFactory();
+    if (!delegationOrchestratorFactoryFactory.createFactory().isOrchestratorInitialized()) {
+      const visitor = ResolutionDelegationVisitorFactoryBeanFactory.createVisitor();
+      const configurator = new DefaultResolutionDelegationConfiguratorBuilderImpl()
+        .withOrchestratorName("FizzBuzzDelegationOrchestrator")
+        .withOrchestratorVersion("1.0.0-STANDARD")
+        .withVisitorConfigurationProfile("STANDARD")
+        .withAuditingEnabled(true)
+        .withVisitorChainActive(true)
+        .withMaxDelegationDepth(10)
+        .build();
+      const orchestrator = EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
+        .getOrCreateOrchestrator([visitor]);
+      console.debug(
+        `[DelegationOrchestrationInfrastructure] Enterprise resolution delegation orchestration infrastructure initialized: ` +
+        `factoryFactoryFactory=[${EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.getFactoryFactoryName()} v${EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.getFactoryFactoryVersion()}], ` +
+        `orchestrator=[${orchestrator.getOrchestratorName()} v${orchestrator.getOrchestratorVersion()}], ` +
+        `configurator=[${configurator.toDiagnosticString()}], ` +
+        `visitors=[${orchestrator.getRegisteredVisitorNames().join(", ")}]`,
+      );
+    }
   }
   {
     const applicationContextForJmx = FizzBuzzEnterpriseApplicationContextFactoryBean.getApplicationContext();
@@ -802,11 +830,25 @@ function resolveBatchChunkOrientedJob(
 }
 
 export function fizzBuzzValue(value: number): string {
-  const delegate = resolveEnterpriseBusinessDelegate();
-  return delegate.delegateSingleValueResolution(value);
+  const delegationOrchestrator =
+    EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
+      .getOrCreateOrchestrator();
+  return delegationOrchestrator.orchestrateDelegation(value, (v: number) => {
+    const delegate = resolveEnterpriseBusinessDelegate();
+    return delegate.delegateSingleValueResolution(v);
+  });
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const batchJob = resolveBatchChunkOrientedJob(start, end);
-  return batchJob.execute();
+  const delegationOrchestrator =
+    EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
+      .getOrCreateOrchestrator();
+  return delegationOrchestrator.orchestrateRangeDelegation(
+    start,
+    end,
+    (s: number, e: number) => {
+      const batchJob = resolveBatchChunkOrientedJob(s, e);
+      return batchJob.execute();
+    },
+  );
 }
