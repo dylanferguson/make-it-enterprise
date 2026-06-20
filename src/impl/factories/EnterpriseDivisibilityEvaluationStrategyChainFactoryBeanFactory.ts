@@ -12,6 +12,7 @@ import { LatencyThresholdDivisibilityEvaluationStrategyChainLinkImpl } from "../
 import { ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl } from "../chains/ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl.js";
 import { DivisibilityEvaluationStrategyChainBuilderImpl } from "../builders/DivisibilityEvaluationStrategyChainBuilderImpl.js";
 import { EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl } from "../configuration/EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl.js";
+import { ModuloOperationHandlerDelegationBridgeFactoryBeanFactory } from "./ModuloOperationHandlerDelegationBridgeFactoryBeanFactory.js";
 
 export class EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl extends AbstractBaseDivisibilityEvaluationStrategyChainFactory {
   private static readonly FACTORY_BEAN_NAME = "EnterpriseDivisibilityEvaluationStrategyChainFactory";
@@ -61,7 +62,10 @@ export class EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl extends Ab
       builder.addLink(new ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl());
     }
 
-    builder.addLink(new ModuloOperationDivisibilityEvaluationStrategyChainLinkImpl());
+    const terminalLink = new ModuloOperationDivisibilityEvaluationStrategyChainLinkImpl();
+    const bridge = ModuloOperationHandlerDelegationBridgeFactoryBeanFactory.createBridge();
+    terminalLink.setDelegationBridge(bridge);
+    builder.addLink(terminalLink);
 
     const headLink: IDivisibilityEvaluationStrategyChainLink = builder.build();
     return new ChainBasedDivisibilityEvaluationStrategyChainImpl(headLink);
