@@ -65,6 +65,12 @@ import type { IFizzBuzzEnterpriseBusinessDelegate } from "./contracts/IFizzBuzzE
 import type { IFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContext } from "./contracts/IFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContext.js";
 import { FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory } from "./impl/businessdelegates/factories/FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory.js";
 import { DefaultFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContextImpl } from "./impl/businessdelegates/DefaultFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContextImpl.js";
+import { DivisibilitySpecificationStrategyFactoryBeanFactory } from "./specification/factories/DivisibilitySpecificationStrategyFactoryBeanFactory.js";
+import { ModuloArithmeticCommandInvokerFactoryBeanFactory } from "./moduloarithmeticcommand/factories/ModuloArithmeticCommandInvokerFactoryBeanFactory.js";
+import { TemplateMethodResolutionChainHandlerFactoryBeanFactory } from "./templatemethod/factories/TemplateMethodResolutionChainHandlerFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory } from "./visitortrail/factories/EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.js";
+import type { IEnterpriseFizzBuzzResolutionAuditTrailVisitor } from "./visitortrail/contracts/IEnterpriseFizzBuzzResolutionAuditTrailVisitor.js";
+import type { IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler } from "./templatemethod/contracts/IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler.js";
 import { FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory } from "./impl/chains/resolution/factories/FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.js";
 import type { IFizzBuzzResolutionStrategyChainOfResponsibilityManager } from "./contracts/IFizzBuzzResolutionStrategyChainOfResponsibilityManager.js";
 import type { IEnterpriseFizzBuzzResolutionStrategySelectorVisitor } from "./contracts/IEnterpriseFizzBuzzResolutionStrategySelectorVisitor.js";
@@ -240,6 +246,24 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
     }
   }
   {
+    const specificationRegistry = DivisibilitySpecificationStrategyFactoryBeanFactory.createRegistry();
+    const commandInvoker = ModuloArithmeticCommandInvokerFactoryBeanFactory.createInvoker();
+    const moduloCommand = ModuloArithmeticCommandInvokerFactoryBeanFactory.getCommand();
+    const templateMethodHandler = TemplateMethodResolutionChainHandlerFactoryBeanFactory.createBaseHandler();
+    const decoratedTemplateMethodHandler = TemplateMethodResolutionChainHandlerFactoryBeanFactory.createDecoratedHandler();
+    const auditTrailVisitor = EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.createVisitor();
+    console.debug(
+      `[SpecificationPatternInfrastructure] Enterprise specification pattern infrastructure initialized: ` +
+      `registry=[${specificationRegistry.getRegistryName()} v${specificationRegistry.getRegistryVersion()}], ` +
+      `specifications=[${specificationRegistry.getRegisteredSpecificationNames().join(", ")}], ` +
+      `invoker=[${commandInvoker.getInvokerName()} v${commandInvoker.getInvokerVersion()}], ` +
+      `moduloCommand=[${moduloCommand?.getCommandDescriptor() ?? "N/A"}], ` +
+      `templateMethod=[${templateMethodHandler.getTemplateMethodDescriptor()}], ` +
+      `decoratedTemplateMethod=[${decoratedTemplateMethodHandler.getTemplateMethodDescriptor()}], ` +
+      `auditVisitor=[${auditTrailVisitor.getVisitorName()} v${auditTrailVisitor.getVisitorVersion()}]`,
+    );
+  }
+  {
     let localizationInitialized = false;
     if (LocalizedMessageResolutionChainHandlerFactoryBeanFactory.getChainHead() === null) {
       const chainHandler = LocalizedMessageResolutionChainHandlerFactoryBeanFactory.createChainHandler("FULL");
@@ -288,12 +312,17 @@ function initializeEnterpriseBusinessDelegateInfrastructure(): void {
   const moduloFiveChainDelegate = passThroughChainDelegate;
   const moduloFifteenChainDelegate = passThroughChainDelegate;
 
+  const templateMethodHandler = TemplateMethodResolutionChainHandlerFactoryBeanFactory.getDecoratedHandler();
+  const auditTrailVisitor = EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.getVisitor();
+
   enterpriseResolutionStrategyChainOfResponsibilityManager =
     FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.createChainManager(
       moduloThreeChainDelegate,
       moduloFiveChainDelegate,
       moduloFifteenChainDelegate,
       enterpriseResolutionStrategySelectorVisitor ?? undefined,
+      templateMethodHandler ?? undefined,
+      auditTrailVisitor ?? undefined,
     );
 
   const baseFacade = resolveResolutionFacade();

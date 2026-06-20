@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: template-method-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/component: template-method-engine
+    app.kubernetes.io/version: "1.0.0"
+data:
+  TEMPLATE_METHOD_RESOLUTION_PROFILE: "SPECIFICATION_DRIVEN"
+  TEMPLATE_METHOD_DECORATOR_ENABLED: "true"
+  TEMPLATE_METHOD_DECORATOR_CHAIN: "audit"
+  PRE_RESOLUTION_HOOK_ENABLED: "true"
+  POST_RESOLUTION_HOOK_ENABLED: "true"
+  SPECIFICATION_FALLBACK_TO_DIRECT_MODULO: "true"

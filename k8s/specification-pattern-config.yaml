@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: specification-pattern-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/component: specification-engine
+    app.kubernetes.io/version: "1.0.0"
+data:
+  SPECIFICATION_REGISTRY_CAPACITY: "256"
+  SPECIFICATION_CACHE_TTL_SECONDS: "300"
+  MODULO_COMMAND_HISTORY_DEPTH: "1000"
+  COMPOSITE_SPECIFICATION_EAGER_EVALUATION: "true"
+  TEMPLATE_METHOD_AUDIT_TRAIL_ENABLED: "true"

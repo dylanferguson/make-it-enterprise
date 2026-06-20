@@ -1,8 +1,12 @@
 import type { IFizzBuzzResolutionStrategyChainOfResponsibilityHandler } from "../../../../contracts/IFizzBuzzResolutionStrategyChainOfResponsibilityHandler.js";
 import type { IFizzBuzzResolutionStrategyChainOfResponsibilityManager } from "../../../../contracts/IFizzBuzzResolutionStrategyChainOfResponsibilityManager.js";
 import type { IEnterpriseFizzBuzzResolutionStrategySelectorVisitor } from "../../../../contracts/IEnterpriseFizzBuzzResolutionStrategySelectorVisitor.js";
+import type { IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler } from "../../../../templatemethod/contracts/IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler.js";
+import type { IEnterpriseFizzBuzzResolutionAuditTrailVisitor } from "../../../../visitortrail/contracts/IEnterpriseFizzBuzzResolutionAuditTrailVisitor.js";
+import { EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory } from "../../../../visitortrail/factories/EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.js";
 import { ModuloBasedResolutionStrategyChainHandlerImpl } from "../ModuloBasedResolutionStrategyChainHandlerImpl.js";
 import { DefaultResolutionStrategyChainHandlerImpl } from "../DefaultResolutionStrategyChainHandlerImpl.js";
+import { TemplateMethodSpecificationDrivenChainHandlerImpl } from "../TemplateMethodSpecificationDrivenChainHandlerImpl.js";
 import { EnterpriseFizzBuzzResolutionStrategySelectorVisitorImpl } from "../visitors/EnterpriseFizzBuzzResolutionStrategySelectorVisitorImpl.js";
 import { FizzBuzzResolutionStrategyChainOfResponsibilityManagerImpl } from "../FizzBuzzResolutionStrategyChainOfResponsibilityManagerImpl.js";
 
@@ -18,6 +22,8 @@ export class FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory {
     moduloFiveHandler: (value: number, innerResolver: (value: number) => string) => string,
     moduloFifteenHandler: (value: number, innerResolver: (value: number) => string) => string,
     visitor?: IEnterpriseFizzBuzzResolutionStrategySelectorVisitor,
+    templateMethodHandler?: IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler,
+    auditTrailVisitor?: IEnterpriseFizzBuzzResolutionAuditTrailVisitor,
   ): IFizzBuzzResolutionStrategyChainOfResponsibilityManager {
     if (FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.chainManagerSingleton === null) {
       FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.strategySelectorVisitorSingleton =
@@ -34,6 +40,20 @@ export class FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory {
         moduloHandler,
         defaultHandler,
       ];
+
+      if (templateMethodHandler !== null && templateMethodHandler !== undefined) {
+        const effectiveAuditTrail = auditTrailVisitor
+          ?? EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.createVisitor();
+        const templateMethodChainHandler = new TemplateMethodSpecificationDrivenChainHandlerImpl(
+          templateMethodHandler,
+          effectiveAuditTrail,
+          templateMethodHandler,
+        );
+        handlers.unshift(templateMethodChainHandler);
+        console.debug(
+          `[${FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.FACTORY_BEAN_NAME}] Template method handler registered as highest priority handler in chain`,
+        );
+      }
 
       FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.chainManagerSingleton =
         new FizzBuzzResolutionStrategyChainOfResponsibilityManagerImpl(
