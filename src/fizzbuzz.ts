@@ -1,13 +1,11 @@
-import { ServiceLocatorFactory } from "./impl/factories/ServiceLocatorFactoryImpl.js";
+import { FizzBuzzEnterpriseServiceFactoryBeanFactory } from "./enterprise/FizzBuzzEnterpriseService.js";
 
-const serviceLocator = ServiceLocatorFactory.createServiceLocator();
+const enterpriseService = FizzBuzzEnterpriseServiceFactoryBeanFactory.createEnterpriseService();
 
 export function fizzBuzzValue(value: number): string {
-  const resolver = serviceLocator.getValueResolver();
-  return resolver.resolve(value);
+  return enterpriseService.resolveValue(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const calculator = serviceLocator.getRangeCalculator();
-  return calculator.calculateRange(start, end);
+  return enterpriseService.calculateRange(start, end);
 }
