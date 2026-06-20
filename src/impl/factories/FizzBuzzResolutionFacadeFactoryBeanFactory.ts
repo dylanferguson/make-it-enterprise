@@ -2,16 +2,14 @@ import { FizzBuzzSingleValueResolutionFacadeImpl } from "../facades/FizzBuzzSing
 import { FizzBuzzComputationRequestBuilderImpl } from "../builders/FizzBuzzComputationRequestBuilderImpl.js";
 import { FizzBuzzComputationTemplateFactoryBean } from "./FizzBuzzComputationTemplateFactoryBean.js";
 import { FizzBuzzCommandInfrastructureFacadeImpl } from "../services/FizzBuzzCommandInfrastructureFacadeImpl.js";
-import { FizzBuzzValueResolutionCommandImpl } from "../commands/FizzBuzzValueResolutionCommandImpl.js";
-import { FizzBuzzEnterpriseServiceFactoryBeanFactory } from "../../enterprise/FizzBuzzEnterpriseService.js";
-import { FizzBuzzEnterpriseServiceFacadeImpl } from "../delegates/FizzBuzzEnterpriseServiceFacadeImpl.js";
-import { FizzBuzzClientSideServiceDelegateImpl } from "../delegates/FizzBuzzClientSideServiceDelegateImpl.js";
-import { BusinessDelegateLookupServiceFactoryBean } from "../delegates/BusinessDelegateLookupServiceFactoryBean.js";
-import { ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory } from "./ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory.js";
+import { ExpressionTreeBasedFizzBuzzValueResolutionCommandImpl } from "../commands/ExpressionTreeBasedFizzBuzzValueResolutionCommandImpl.js";
+import { FizzBuzzExpressionRuleSetFactoryBeanFactory } from "./FizzBuzzExpressionRuleSetFactoryBeanFactory.js";
+import { CachingFizzBuzzComputationCommandDecoratorImpl } from "../decorators/CachingFizzBuzzComputationCommandDecoratorImpl.js";
+import { AuditingFizzBuzzComputationCommandDecoratorImpl } from "../decorators/AuditingFizzBuzzComputationCommandDecoratorImpl.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
-import type { IFizzBuzzServiceDelegate } from "../../contracts/IFizzBuzzServiceDelegate.js";
-import type { IBusinessDelegateLookupService } from "../../contracts/IBusinessDelegateLookupService.js";
+import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
+import type { IFizzBuzzExpressionEvaluator } from "../../contracts/IFizzBuzzExpressionEvaluator.js";
 import type { IFizzBuzzCommandInfrastructureFacade } from "../../contracts/IFizzBuzzCommandInfrastructureFacade.js";
 import type { IFizzBuzzComputationRequestBuilder } from "../../contracts/IFizzBuzzComputationRequestBuilder.js";
 
@@ -24,8 +22,6 @@ export const FizzBuzzResolutionFacadeConfigurationProfile = {
 
 export type FizzBuzzResolutionFacadeConfigurationProfile =
   (typeof FizzBuzzResolutionFacadeConfigurationProfile)[keyof typeof FizzBuzzResolutionFacadeConfigurationProfile];
-
-const DELEGATE_JNDI_NAME = "java:comp/env/fizzbuzz/DefaultEnterpriseServiceDelegate";
 
 export class FizzBuzzResolutionFacadeFactoryBeanFactory {
   private static readonly FACTORY_BEAN_NAME = "FizzBuzzResolutionFacadeFactoryBeanFactory";
@@ -89,36 +85,22 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
   }
 
   createResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
-    const enterpriseService =
-      FizzBuzzEnterpriseServiceFactoryBeanFactory.createEnterpriseService();
-    const enterpriseServiceFacade = new FizzBuzzEnterpriseServiceFacadeImpl(
-      enterpriseService,
-    );
-    const protocolAwareFacade = ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory.createProtocolAwareFacade(
-      enterpriseServiceFacade,
-    );
-    const clientSideDelegate = new FizzBuzzClientSideServiceDelegateImpl(
-      protocolAwareFacade,
-    );
-    const lookupServiceFactoryBean =
-      BusinessDelegateLookupServiceFactoryBean.createLookupServiceFactoryBean(
-        clientSideDelegate,
-        DELEGATE_JNDI_NAME,
-      );
-    const lookupService: IBusinessDelegateLookupService =
-      lookupServiceFactoryBean.createLookupService();
-    const delegate: IFizzBuzzServiceDelegate = lookupService.lookupDelegate(
-      DELEGATE_JNDI_NAME,
-    );
-
     const commandInfrastructureFacade: IFizzBuzzCommandInfrastructureFacade =
       FizzBuzzCommandInfrastructureFacadeImpl.createDefaultFacade();
     const commandInvoker = commandInfrastructureFacade.getCommandInvoker();
 
-    const computationCommand = new FizzBuzzValueResolutionCommandImpl(
-      delegate,
-      DELEGATE_JNDI_NAME,
+    const expressionEvaluator: IFizzBuzzExpressionEvaluator =
+      FizzBuzzExpressionRuleSetFactoryBeanFactory.createSingletonExpressionEvaluator();
+    const baseCommand = new ExpressionTreeBasedFizzBuzzValueResolutionCommandImpl(
+      expressionEvaluator,
     );
+    const cachingDecorator = new CachingFizzBuzzComputationCommandDecoratorImpl(
+      baseCommand,
+    );
+    const computationCommand: IFizzBuzzComputationCommand =
+      new AuditingFizzBuzzComputationCommandDecoratorImpl(
+        cachingDecorator,
+      );
 
     const computationTemplate =
       FizzBuzzComputationTemplateFactoryBean.createTemplate();

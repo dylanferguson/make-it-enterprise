@@ -1,5 +1,6 @@
 import { AbstractBaseFizzBuzzExpression } from "../../abstracts/AbstractBaseFizzBuzzExpression.js";
 import type { IFizzBuzzExpression } from "../../contracts/IFizzBuzzExpression.js";
+import type { IFizzBuzzExpressionVisitor } from "../../contracts/IFizzBuzzExpressionVisitor.js";
 import { ExpressionEvaluationException } from "../../exceptions/ExpressionEvaluationException.js";
 
 export class AndExpressionImpl extends AbstractBaseFizzBuzzExpression {
@@ -37,6 +38,10 @@ export class AndExpressionImpl extends AbstractBaseFizzBuzzExpression {
 
   override getExpressionType(): string {
     return AndExpressionImpl.EXPRESSION_TYPE;
+  }
+
+  override accept(visitor: IFizzBuzzExpressionVisitor): void {
+    visitor.visitAnd(this, this.left, this.right);
   }
 
   override getExpressionCanonicalForm(): string {

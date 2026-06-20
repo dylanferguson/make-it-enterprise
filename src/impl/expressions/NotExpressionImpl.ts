@@ -1,5 +1,6 @@
 import { AbstractBaseFizzBuzzExpression } from "../../abstracts/AbstractBaseFizzBuzzExpression.js";
 import type { IFizzBuzzExpression } from "../../contracts/IFizzBuzzExpression.js";
+import type { IFizzBuzzExpressionVisitor } from "../../contracts/IFizzBuzzExpressionVisitor.js";
 import { ExpressionEvaluationException } from "../../exceptions/ExpressionEvaluationException.js";
 
 export class NotExpressionImpl extends AbstractBaseFizzBuzzExpression {
@@ -31,6 +32,10 @@ export class NotExpressionImpl extends AbstractBaseFizzBuzzExpression {
 
   override getExpressionType(): string {
     return NotExpressionImpl.EXPRESSION_TYPE;
+  }
+
+  override accept(visitor: IFizzBuzzExpressionVisitor): void {
+    visitor.visitNot(this, this.inner);
   }
 
   override getExpressionCanonicalForm(): string {

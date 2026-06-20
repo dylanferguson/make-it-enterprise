@@ -1,4 +1,5 @@
 import { AbstractBaseFizzBuzzExpression } from "../../abstracts/AbstractBaseFizzBuzzExpression.js";
+import type { IFizzBuzzExpressionVisitor } from "../../contracts/IFizzBuzzExpressionVisitor.js";
 import { ExpressionEvaluationException } from "../../exceptions/ExpressionEvaluationException.js";
 
 export class DivisibleByExpressionImpl extends AbstractBaseFizzBuzzExpression {
@@ -38,6 +39,10 @@ export class DivisibleByExpressionImpl extends AbstractBaseFizzBuzzExpression {
 
   override getExpressionType(): string {
     return DivisibleByExpressionImpl.EXPRESSION_TYPE;
+  }
+
+  override accept(visitor: IFizzBuzzExpressionVisitor): void {
+    visitor.visitDivisibleBy(this, this.divisor);
   }
 
   override getExpressionCanonicalForm(): string {
