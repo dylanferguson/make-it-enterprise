@@ -37,6 +37,7 @@ import type { IResourceAdapter } from "../contracts/IResourceAdapter.js";
 import { EnterpriseFizzBuzzPipelineFactoryBeanFactory, FizzBuzzPipelineConfigurationProfile } from "../impl/factories/EnterpriseFizzBuzzPipelineFactoryBean.js";
 import type { IFizzBuzzEntityHome } from "../contracts/IFizzBuzzEntityHome.js";
 import { FizzBuzzEntityHomeFactoryBeanFactory } from "../impl/entities/FizzBuzzEntityHomeFactoryBeanFactory.js";
+import { FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory } from "../impl/factories/FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -47,6 +48,8 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   static createEnterpriseService(): FizzBuzzEnterpriseService {
     if (FizzBuzzEnterpriseServiceFactoryBeanFactory.instance === null) {
       FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer = new FizzBuzzPropertyPlaceholderConfigurerImpl();
+
+      FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory.createResolver();
 
       const serviceLocator = new ServiceLocatorImpl();
       const healthAggregator = new HealthCheckAggregatorImpl();

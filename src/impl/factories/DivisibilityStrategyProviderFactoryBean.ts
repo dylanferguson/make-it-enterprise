@@ -1,19 +1,22 @@
 import type { IDivisibilityStrategyProvider } from "../../contracts/IDivisibilityStrategyProvider.js";
 import type { IFizzBuzzVisitor } from "../../contracts/IFizzBuzzVisitor.js";
 import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
-import { DivisibilityStrategyProviderChainOfResponsibilityImpl } from "../providers/DivisibilityStrategyProviderChainOfResponsibilityImpl.js";
+import { ServiceLocatorModuloDivisibilityStrategyProviderImpl } from "../providers/ServiceLocatorModuloDivisibilityStrategyProviderImpl.js";
 import { ModuloBasedDivisibilityStrategyResolutionHandler } from "../handlers/ModuloBasedDivisibilityStrategyResolutionHandler.js";
 import { CatchAllDivisibilityStrategyResolutionHandler } from "../handlers/CatchAllDivisibilityStrategyResolutionHandler.js";
+import { FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory } from "./FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory.js";
 
 export class DivisibilityStrategyProviderFactoryBean {
   private static readonly FACTORY_BEAN_NAME = "DivisibilityStrategyProviderFactoryBean";
-  private static readonly FACTORY_BEAN_VERSION = "1.0.0-ENTERPRISE";
+  private static readonly FACTORY_BEAN_VERSION = "2.0.0-ENTERPRISE";
 
   static createProvider(
     visitor: IFizzBuzzVisitor,
     strategyProvider: IModuloArithmeticStrategyProvider,
   ): IDivisibilityStrategyProvider {
-    const provider = new DivisibilityStrategyProviderChainOfResponsibilityImpl(visitor);
+    FizzBuzzModuloEvaluationStrategyProviderResolverFactoryBeanFactory.createResolver();
+
+    const provider = new ServiceLocatorModuloDivisibilityStrategyProviderImpl();
 
     const moduloHandler = new ModuloBasedDivisibilityStrategyResolutionHandler(
       visitor,
@@ -25,7 +28,7 @@ export class DivisibilityStrategyProviderFactoryBean {
     provider.registerResolutionHandler(catchAllHandler);
 
     console.debug(
-      `[${DivisibilityStrategyProviderFactoryBean.FACTORY_BEAN_NAME}] Provider created with 2 resolution handlers`,
+      `[${DivisibilityStrategyProviderFactoryBean.FACTORY_BEAN_NAME}] ServiceLocator-aware provider created with ${provider.getProviderName()} (${provider.getProviderVersion()})`,
     );
 
     return provider;

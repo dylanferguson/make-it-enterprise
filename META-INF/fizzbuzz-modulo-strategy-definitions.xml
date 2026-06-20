@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+  <description>
+    FizzBuzz Enterprise Edition — Modular Evaluation Strategy Bean Definitions
+    This XML configuration defines the mapping from divisor values to their
+    corresponding ModuloEvaluationStrategyFactoryBean implementations. Each
+    factory bean is resolved by the AbstractBaseDivisibilityStrategyProviderResolver
+    at application startup.
+  </description>
+
+  <bean id="ModuloEvaluationStrategyFactoryBeanRegistry"
+        class="com.fizzbuzz.enterprise.impl.registry.InMemoryModuloEvaluationStrategyFactoryBeanRegistryImpl"
+        singleton="true">
+    <property name="registrationBeans">
+      <list>
+        <ref bean="ModuloRegistrationBean"/>
+      </list>
+    </property>
+  </bean>
+
+  <bean id="ModuloRegistrationBean"
+        class="com.fizzbuzz.enterprise.impl.registry.ProgrammaticModuloRegistrationBeanImpl"
+        singleton="true"/>
+
+  <bean id="AbstractBaseDivisibilityStrategyProviderResolver"
+        class="com.fizzbuzz.enterprise.impl.factories.AbstractBaseDivisibilityStrategyProviderResolver"
+        singleton="true"
+        init-method="initialize"/>
+
+  <bean id="ModuloOperationChainBuilder"
+        class="com.fizzbuzz.enterprise.impl.modulo.ModuloOperationChainBuilder">
+    <property name="validationEnabled" value="true"/>
+    <property name="cachingEnabled" value="true"/>
+    <property name="auditEnabled" value="true"/>
+  </bean>
+
+  <bean id="ValidationModuloChainHandler"
+        class="com.fizzbuzz.enterprise.impl.modulo.handlers.ValidationModuloChainHandlerImpl"/>
+
+  <bean id="CachingModuloChainHandler"
+        class="com.fizzbuzz.enterprise.impl.modulo.handlers.CachingModuloChainHandlerImpl"/>
+
+  <bean id="AuditTrailModuloChainHandler"
+        class="com.fizzbuzz.enterprise.impl.modulo.handlers.AuditTrailModuloChainHandlerImpl"/>
+
+  <bean id="NativeModuloOperatorChainHandler"
+        class="com.fizzbuzz.enterprise.impl.modulo.handlers.NativeModuloOperatorChainHandlerImpl"/>
+
+  <bean id="StandardRemainderOperatorDelegationService"
+        class="com.fizzbuzz.enterprise.impl.services.StandardRemainderOperatorDelegationServiceImpl"
+        singleton="true">
+    <property name="moduloOperatorChainHandler" ref="ValidationModuloChainHandler"/>
+  </bean>
+
+</beans>
