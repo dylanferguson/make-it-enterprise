@@ -25,6 +25,10 @@ import { DefaultEnterpriseServiceBusChannelBindingImpl } from "./impl/bus/Defaul
 import { ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/validation/DivisibilityValidationEnforcementGateFactoryBeanFactory.js";
 import { DefaultValidationEnforcementMetricsCollectorImpl } from "./impl/validation/DefaultValidationEnforcementMetricsCollectorImpl.js";
+import { MessagePropertyResolutionChainFactoryBeanFactory } from "./impl/factories/MessagePropertyResolutionChainFactoryBeanFactory.js";
+import { MessageTemplateCodecProviderFactoryBeanFactory } from "./impl/factories/MessageTemplateCodecProviderFactoryBeanFactory.js";
+
+let messagePropertyConfigurationInitialized = false;
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   let deploymentDecorator: IEnterpriseDeploymentAwareBootstrapDecorator | null = null;
@@ -55,6 +59,17 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   }
   if (!DivisibilityValidationEnforcementGateFactoryBeanFactory.getValidationGate()) {
     DivisibilityValidationEnforcementGateFactoryBeanFactory.createValidationGate("STANDARD_STRICT");
+  }
+  if (!messagePropertyConfigurationInitialized) {
+    const propertyResolutionChain = MessagePropertyResolutionChainFactoryBeanFactory.createResolutionChain();
+    const codecProvider = MessageTemplateCodecProviderFactoryBeanFactory.createCodecProvider(propertyResolutionChain);
+    console.debug(
+      `[MessageConfigurationInfrastructure] Enterprise message template codec initialized: ` +
+      `chain=[${propertyResolutionChain.getChainName()} v${propertyResolutionChain.getChainVersion()}], ` +
+      `provider=[${codecProvider.getProviderName()} v${codecProvider.getProviderVersion()}], ` +
+      `sources=[${propertyResolutionChain.getRegisteredSourceNames().join(", ")}]`,
+    );
+    messagePropertyConfigurationInitialized = true;
   }
   {
     const metricsCollector = new DefaultValidationEnforcementMetricsCollectorImpl();

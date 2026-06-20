@@ -1,18 +1,22 @@
 import type { IFizzBuzzExpressionEvaluator } from "../../contracts/IFizzBuzzExpressionEvaluator.js";
 import type { IFizzBuzzOutputFormatter } from "../../contracts/IFizzBuzzOutputFormatter.js";
+import type { IMessageTemplateCodecProvider } from "../../contracts/IMessageTemplateCodecProvider.js";
 import { FizzBuzzRuleSetImpl } from "../rules/FizzBuzzRuleSetImpl.js";
 import { FizzBuzzExpressionEvaluatorImpl } from "../rules/FizzBuzzExpressionEvaluatorImpl.js";
 import { FizzBuzzRuleDefinitionImpl } from "../rules/FizzBuzzRuleDefinitionImpl.js";
 import { DivisibleByExpressionImpl } from "../expressions/DivisibleByExpressionImpl.js";
 import { AndExpressionImpl } from "../expressions/AndExpressionImpl.js";
 import type { IFizzBuzzRuleSet } from "../../contracts/IFizzBuzzRuleSet.js";
+import { MessageTemplateCodecProviderFactoryBeanFactory } from "./MessageTemplateCodecProviderFactoryBeanFactory.js";
 
 export class FizzBuzzExpressionRuleSetFactoryBeanFactory {
   private static readonly FACTORY_BEAN_NAME = "FizzBuzzExpressionRuleSetFactoryBeanFactory";
-  private static readonly FACTORY_BEAN_VERSION = "1.0.0-ENTERPRISE";
+  private static readonly FACTORY_BEAN_VERSION = "2.0.0-ENTERPRISE-CODEC-AWARE";
   private static instance: IFizzBuzzExpressionEvaluator | null = null;
 
-  static createDefaultRuleSet(): IFizzBuzzRuleSet {
+  static createDefaultRuleSet(messageCodecProvider?: IMessageTemplateCodecProvider): IFizzBuzzRuleSet {
+    const effectiveProvider = messageCodecProvider
+      ?? MessageTemplateCodecProviderFactoryBeanFactory.createCodecProvider();
     const ruleSet = new FizzBuzzRuleSetImpl();
 
     const divisibleByThreeExpr = new DivisibleByExpressionImpl(3);
@@ -25,21 +29,21 @@ export class FizzBuzzExpressionRuleSetFactoryBeanFactory {
     const fizzBuzzRule = new FizzBuzzRuleDefinitionImpl(
       "FizzBuzzRule",
       divisibleByFifteenExpr,
-      "FizzBuzz",
+      effectiveProvider.getFizzBuzzTemplate(),
       100,
     );
 
     const fizzRule = new FizzBuzzRuleDefinitionImpl(
       "FizzRule",
       divisibleByThreeExpr,
-      "Fizz",
+      effectiveProvider.getFizzTemplate(),
       50,
     );
 
     const buzzRule = new FizzBuzzRuleDefinitionImpl(
       "BuzzRule",
       divisibleByFiveExpr,
-      "Buzz",
+      effectiveProvider.getBuzzTemplate(),
       25,
     );
 
@@ -52,9 +56,12 @@ export class FizzBuzzExpressionRuleSetFactoryBeanFactory {
 
   static createExpressionEvaluator(
     outputFormatter?: IFizzBuzzOutputFormatter,
+    messageCodecProvider?: IMessageTemplateCodecProvider,
   ): IFizzBuzzExpressionEvaluator {
-    const ruleSet = FizzBuzzExpressionRuleSetFactoryBeanFactory.createDefaultRuleSet();
-    const evaluator = new FizzBuzzExpressionEvaluatorImpl(ruleSet);
+    const effectiveProvider = messageCodecProvider
+      ?? MessageTemplateCodecProviderFactoryBeanFactory.createCodecProvider();
+    const ruleSet = FizzBuzzExpressionRuleSetFactoryBeanFactory.createDefaultRuleSet(effectiveProvider);
+    const evaluator = new FizzBuzzExpressionEvaluatorImpl(ruleSet, effectiveProvider);
     if (outputFormatter !== undefined) {
       evaluator.setOutputFormatter(outputFormatter);
     }
@@ -63,11 +70,13 @@ export class FizzBuzzExpressionRuleSetFactoryBeanFactory {
 
   static createSingletonExpressionEvaluator(
     outputFormatter?: IFizzBuzzOutputFormatter,
+    messageCodecProvider?: IMessageTemplateCodecProvider,
   ): IFizzBuzzExpressionEvaluator {
     if (FizzBuzzExpressionRuleSetFactoryBeanFactory.instance === null) {
       FizzBuzzExpressionRuleSetFactoryBeanFactory.instance =
         FizzBuzzExpressionRuleSetFactoryBeanFactory.createExpressionEvaluator(
           outputFormatter,
+          messageCodecProvider,
         );
     }
     return FizzBuzzExpressionRuleSetFactoryBeanFactory.instance;
@@ -85,4 +94,3 @@ export class FizzBuzzExpressionRuleSetFactoryBeanFactory {
     return FizzBuzzExpressionRuleSetFactoryBeanFactory.FACTORY_BEAN_VERSION;
   }
 }
-

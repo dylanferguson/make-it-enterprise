@@ -1,16 +1,21 @@
 import { AbstractBaseFizzBuzzOutputFormatter } from "../../abstracts/AbstractBaseFizzBuzzOutputFormatter.js";
+import type { IMessageTemplateCodecProvider } from "../../contracts/IMessageTemplateCodecProvider.js";
 
 export class FizzBuzzOutputFormatterImpl extends AbstractBaseFizzBuzzOutputFormatter {
+  constructor(messageTemplateCodecProvider?: IMessageTemplateCodecProvider) {
+    super(messageTemplateCodecProvider);
+  }
+
   override formatFizzBuzz(): string {
-    return "FizzBuzz";
+    return this.messageTemplateCodecProvider.getFizzBuzzTemplate();
   }
 
   override formatFizz(): string {
-    return "Fizz";
+    return this.messageTemplateCodecProvider.getFizzTemplate();
   }
 
   override formatBuzz(): string {
-    return "Buzz";
+    return this.messageTemplateCodecProvider.getBuzzTemplate();
   }
 
   override formatDefault(value: number): string {

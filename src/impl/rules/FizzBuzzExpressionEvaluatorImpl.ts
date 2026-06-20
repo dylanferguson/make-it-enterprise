@@ -1,12 +1,13 @@
 import { AbstractBaseFizzBuzzExpressionEvaluator } from "../../abstracts/AbstractBaseFizzBuzzExpressionEvaluator.js";
 import type { IFizzBuzzRuleSet } from "../../contracts/IFizzBuzzRuleSet.js";
+import type { IMessageTemplateCodecProvider } from "../../contracts/IMessageTemplateCodecProvider.js";
 
 export class FizzBuzzExpressionEvaluatorImpl extends AbstractBaseFizzBuzzExpressionEvaluator {
   private static readonly EVALUATOR_NAME = "FizzBuzzExpressionEvaluator";
-  private static readonly EVALUATOR_VERSION = "1.0.0-ENTERPRISE";
+  private static readonly EVALUATOR_VERSION = "2.0.0-ENTERPRISE-CODEC-AWARE";
 
-  constructor(ruleSet: IFizzBuzzRuleSet) {
-    super(ruleSet);
+  constructor(ruleSet: IFizzBuzzRuleSet, messageTemplateCodecProvider?: IMessageTemplateCodecProvider) {
+    super(ruleSet, messageTemplateCodecProvider);
   }
 
   override getEvaluatorName(): string {
@@ -26,4 +27,3 @@ export class FizzBuzzExpressionEvaluatorImpl extends AbstractBaseFizzBuzzExpress
     return null;
   }
 }
-
