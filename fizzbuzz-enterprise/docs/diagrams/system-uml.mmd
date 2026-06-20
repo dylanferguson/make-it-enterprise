@@ -1,0 +1,168 @@
+classDiagram
+    direction TB
+
+    class PublicAPI {
+        <<module>>
+        +fizzBuzzValue(value) string
+        +fizzBuzzRange(start, end) string[]
+    }
+
+    class LifecycleOrchestrator {
+        <<interface>>
+        +orchestrateSingleValueResolution(value, resolver) string
+        +orchestrateRangeResolution(start, end, resolver) string[]
+    }
+    class DefaultLifecycleOrchestrator {
+        <<implementation>>
+    }
+
+    class CommandInvoker {
+        <<interface>>
+        +invokeValue(command) string
+    }
+    class ComputationCommand {
+        <<interface>>
+        +execute() unknown
+    }
+    class ValueCommand {
+        <<implementation>>
+    }
+    class SessionFacade {
+        <<interface>>
+        +resolveSingleValue(value) string
+    }
+
+    class ServiceActivator
+    class EndpointDispatcher {
+        <<interface>>
+        +dispatchSingleValueResolution(endpoint, request) response
+    }
+    class ServiceEndpoint {
+        <<interface>>
+        +invokeSingleValueComputation(request) response
+    }
+
+    class PipelineManagerResolver {
+        <<strategy selector>>
+        +selectPipelineManagerResolutionStrategy() strategy
+    }
+    class PipelineManager {
+        <<interface>>
+        +executeSingleValuePipeline(value) string
+    }
+    class DefaultPipelineManager {
+        <<implementation>>
+    }
+    class PipelineExecutionCommand {
+        <<interface>>
+        +executeSingleValue(value) string
+    }
+
+    class DelegationOrchestrator {
+        <<interface>>
+        +orchestrateDelegation(value, resolver) string
+    }
+    class BusinessDelegate {
+        <<interface>>
+        +delegateSingleValueResolution(value) string
+    }
+    class PublicAPIResolutionDelegate {
+        <<interface>>
+        +resolveSingleValue(value) string
+    }
+
+    class ResolutionFacade {
+        <<interface>>
+        +resolveValue(value) string
+    }
+    class FacadeDecoratorStack {
+        <<decorator>>
+        +resolveValue(value) string
+    }
+    class ComputationTemplate {
+        <<template method>>
+        +executeComputation(command, request) response
+    }
+    class ExpressionCommand {
+        <<command>>
+        +execute(request) response
+    }
+    class ExpressionEvaluator {
+        <<interpreter>>
+        +evaluate(value) string
+    }
+    class DivisibleByExpression {
+        <<expression>>
+        +interpret(value) boolean
+    }
+
+    class RemainderSupervisor {
+        <<interface>>
+        +superviseRemainderComputation(dividend, divisor, context) number
+    }
+    class RemainderDelegationService {
+        <<chain / strategy>>
+        +computeRemainder(dividend, divisor) number
+    }
+    class RemainderProtocolStack {
+        <<7-layer protocol>>
+        +computeRemainder(dividend, divisor) number
+    }
+    class NativeModulo {
+        <<terminal implementation>>
+        +compute(dividend, divisor) number
+    }
+
+    class GovernanceFacade {
+        <<cross-cutting>>
+        +enforceComputation(value, resolver) string
+    }
+    class ServiceLocator {
+        <<registry>>
+        +lookup(name) component
+    }
+    class EventBus {
+        <<observer / ESB>>
+        +publishEvent(event)
+    }
+    class OutputNormalizationPipeline {
+        <<pipeline>>
+        +execute(result, value, contextId) string
+    }
+
+    LifecycleOrchestrator <|.. DefaultLifecycleOrchestrator
+    ComputationCommand <|.. ValueCommand
+    PipelineManager <|.. DefaultPipelineManager
+
+    PublicAPI --> LifecycleOrchestrator : delegates
+    LifecycleOrchestrator --> CommandInvoker : invokes through
+    CommandInvoker o-- ComputationCommand
+    ValueCommand --> SessionFacade
+    SessionFacade --> ServiceActivator
+    ServiceActivator --> EndpointDispatcher
+    EndpointDispatcher --> ServiceEndpoint
+    ServiceEndpoint --> PipelineManagerResolver
+    PipelineManagerResolver --> PipelineManager
+    PipelineManager o-- PipelineExecutionCommand
+    PipelineExecutionCommand --> DelegationOrchestrator
+    PipelineExecutionCommand --> BusinessDelegate
+    BusinessDelegate --> GovernanceFacade
+    BusinessDelegate --> ServiceLocator
+    BusinessDelegate --> PublicAPIResolutionDelegate
+    PublicAPIResolutionDelegate --> ResolutionFacade
+    ResolutionFacade <|.. FacadeDecoratorStack
+    FacadeDecoratorStack o-- ComputationTemplate
+    ComputationTemplate o-- ExpressionCommand
+    ExpressionCommand --> ExpressionEvaluator
+    ExpressionEvaluator o-- DivisibleByExpression
+    DivisibleByExpression --> RemainderSupervisor
+    RemainderSupervisor --> RemainderDelegationService
+    RemainderDelegationService --> RemainderProtocolStack
+    RemainderProtocolStack --> NativeModulo
+    FacadeDecoratorStack --> OutputNormalizationPipeline
+
+    LifecycleOrchestrator ..> EventBus : lifecycle events
+    PipelineManager ..> GovernanceFacade : decorated by
+    ResolutionFacade ..> GovernanceFacade : wrapped by
+    ResolutionFacade ..> ServiceLocator : resolves components
+    ResolutionFacade ..> EventBus : audit / metrics events

@@ -1,0 +1,47 @@
+sequenceDiagram
+    autonumber
+    actor Caller
+    participant API as Public API
+    participant Application as Lifecycle + Application
+    participant Pipeline as Pipeline + Delegation
+    participant Facades as Facade Stack
+    participant Core as Rules + Remainder
+
+    Note over API,Core: Default warm single-value path. Factories, caches, visitors, and most decorators are collapsed
+
+    Caller->>API: fizzBuzzValue(n)
+    API->>Application: orchestrateSingleValueResolution(n, innerResolver)
+    activate Application
+    Application->>Application: transition to COMPUTING
+    Application->>Application: execute PRE_COMPUTE handler chain
+    Application->>Application: CommandInvoker → ValueCommand → SessionFacade
+    Application->>Application: ServiceActivator → Dispatcher → ServiceEndpoint
+    Application->>Pipeline: executeSingleValuePipeline(n)
+    activate Pipeline
+    Pipeline->>Pipeline: resolve manager → select execution command
+    Pipeline->>Pipeline: DelegationOrchestrator → BusinessDelegate
+    Pipeline->>Pipeline: governance → PublicApiDelegate → request adapter
+    Pipeline->>Facades: resolveValue(n)
+    activate Facades
+    Note over Facades: Validation, interception, configuration, document, AOP, transaction, security, proxy, bridge, and normalization layers
+    Facades->>Core: execute decorated expression-tree command
+    activate Core
+    loop Rules in priority order: FizzBuzz, Fizz, Buzz
+        Core->>Core: interpret DivisibleBy expression
+        Core->>Core: supervisor → locator → delegation service
+        Core->>Core: chain → strategy → 7-layer protocol stack
+        Core->>Core: terminal native n % divisor
+    end
+    Core-->>Facades: raw output label or number
+    deactivate Core
+    Facades->>Facades: normalize and post-process result
+    Facades-->>Pipeline: result
+    deactivate Facades
+    Pipeline-->>Application: endpoint response.computedResult
+    deactivate Pipeline
+    Application->>Application: validate result
+    Application->>Application: execute POST_COMPUTE handler chain
+    Application->>Application: transition to FORMATTED
+    Application-->>API: formattedResult
+    deactivate Application
+    API-->>Caller: Fizz / Buzz / FizzBuzz / number

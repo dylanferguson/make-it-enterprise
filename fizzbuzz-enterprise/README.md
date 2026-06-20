@@ -87,6 +87,16 @@ initializes a service locator, bootstrap initializer, deployment-descriptor
 decorator, and enterprise application context. It installs graceful-shutdown
 handlers when it is done.
 
+## Architecture diagrams
+
+The [architecture diagrams](docs/architecture.md) trace the default
+`fizzBuzzValue(n)` call as a sequence diagram and map the representative system
+contracts as UML. Editable Mermaid sources live in [`docs/diagrams`](docs/diagrams/).
+
+[![Sequence diagram of the default FizzBuzz function flow](docs/diagrams/function-flow.svg)](docs/architecture.md#function-flow)
+
+[![UML class diagram of the FizzBuzz Enterprise system](docs/diagrams/system-uml.svg)](docs/architecture.md#system-uml)
+
 ## Did it still work?
 
 Yes. In the exported result, all five original tests pass, both TypeScript
