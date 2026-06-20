@@ -7,7 +7,7 @@ set -eu
 # itself is never modified.
 
 volume="make-it-enterprise-workspace"
-dest="${1:-.sandbox-export}"
+dest="${1:-fizzbuzz-enterprise}"
 
 case "$dest" in
   "" | / | . | ..)

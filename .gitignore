@@ -3,5 +3,5 @@ dist
 coverage
 .DS_Store
 *.log
-.sandbox-export
+fizzbuzz-enterprise
 .sandbox-seeded
