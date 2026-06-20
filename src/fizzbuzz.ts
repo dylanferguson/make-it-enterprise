@@ -111,6 +111,7 @@ import { EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory } 
 import { EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computedoutcome/factories/EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IPreEvaluationAwareResolutionFacadeDecorator } from "./computedoutcome/contracts/index.js";
 import { EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory } from "./outputcomposite/factories/EnterpriseOutputCompositeFactoryBeanFactory.js";
+import { JmxInfrastructureFactoryBeanFactory } from "./jmx/factories/JmxInfrastructureFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -434,6 +435,35 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `registry=[${compositeProvider.getRegistry()?.getRegistryName() ?? "N/A"} v${compositeProvider.getRegistry()?.getRegistryVersion() ?? "N/A"}], ` +
       `components=[${compositeProvider.getRegistry()?.getRegisteredComponentNames().join(", ") ?? "N/A"}]`,
     );
+  }
+  {
+    const applicationContextForJmx = FizzBuzzEnterpriseApplicationContextFactoryBean.getApplicationContext();
+    const managementMBean = applicationContextForJmx !== null
+      ? (applicationContextForJmx as any).getManagementMBean?.() ?? null
+      : null;
+    if (managementMBean !== null && !JmxInfrastructureFactoryBeanFactory.isInfrastructureInitialized()) {
+      const jmxInitialized = JmxInfrastructureFactoryBeanFactory.initializeJmxInfrastructure(managementMBean);
+      if (jmxInitialized) {
+        const jmxServer = JmxInfrastructureFactoryBeanFactory.getJmxServer();
+        const monitoringMBean = JmxInfrastructureFactoryBeanFactory.getMonitoringMBean();
+        console.debug(
+          `[JMXInfrastructure] Enterprise JMX management and monitoring infrastructure initialized: ` +
+          `server=[${jmxServer?.getServerName() ?? "N/A"} v${jmxServer?.getServerVersion() ?? "N/A"}], ` +
+          `registeredMBeans=[${jmxServer?.getMBeanCount() ?? 0}], ` +
+          `monitoringMBean=[${monitoringMBean?.getMBeanName() ?? "N/A"}], ` +
+          `sloThreshold=[${monitoringMBean?.getSloThresholdMs() ?? "N/A"}ms], ` +
+          `healthStatus=[${managementMBean.getHealthStatus()?.status ?? "UNKNOWN"}], ` +
+          `totalResolved=[${managementMBean.getTotalValuesResolved()}]`,
+        );
+      }
+    } else {
+      console.debug(
+        `[JMXInfrastructure] JMX infrastructure initialization skipped: ` +
+        `applicationContext=[${applicationContextForJmx !== null ? "present" : "null"}], ` +
+        `managementMBean=[${managementMBean !== null ? "present" : "null"}], ` +
+        `infrastructureInitialized=[${JmxInfrastructureFactoryBeanFactory.isInfrastructureInitialized()}]`,
+      );
+    }
   }
   return true;
 })();
