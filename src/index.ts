@@ -1,7 +1,25 @@
 import { ServiceLocatorFactoryBeanFactory } from "./impl/factories/ServiceLocatorFactoryBean.js";
+import { EnterpriseApplicationBootstrapInitializerFactoryBean } from "./impl/factories/EnterpriseApplicationBootstrapInitializerFactoryBean.js";
+import { FizzBuzzEnterpriseApplicationContextFactoryBean } from "./impl/factories/FizzBuzzEnterpriseApplicationContextFactoryBeanFactory.js";
 
-const factoryBean = ServiceLocatorFactoryBeanFactory.createFactoryBean("FizzBuzzIndexServiceLocatorFactoryBean");
-const serviceLocator = factoryBean.createServiceLocator();
+const startupPhase = "INITIALIZING";
+console.debug(`[FizzBuzzIndex] Enterprise application startup phase: ${startupPhase}`);
+
+const bootstrapInitializer =
+  EnterpriseApplicationBootstrapInitializerFactoryBean.createBootstrapInitializer(true);
+const applicationContext =
+  FizzBuzzEnterpriseApplicationContextFactoryBean.createApplicationContext("STANDARD");
+
+if (applicationContext.isInitialized()) {
+  console.debug(
+    `[FizzBuzzIndex] Application context initialized: ${applicationContext.getApplicationContextName()} v${applicationContext.getApplicationContextVersion()}`,
+  );
+  console.debug(
+    `[FizzBuzzIndex] Registered components: ${applicationContext.getRegisteredComponentNames().join(", ")}`,
+  );
+}
+
+console.debug("[FizzBuzzIndex] Enterprise application startup complete. Commencing FizzBuzz computation.");
 
 const { fizzBuzzRange } = await import("./fizzbuzz.js");
 
@@ -10,15 +28,23 @@ for (const value of fizzBuzzRange(1, 100)) {
 }
 
 process.on("SIGTERM", () => {
-  console.debug("[FizzBuzzIndex] SIGTERM received — initiating graceful shutdown");
-  const { FizzBuzzEnterpriseServiceFactoryBeanFactory } = require("./enterprise/FizzBuzzEnterpriseService.js");
-  FizzBuzzEnterpriseServiceFactoryBeanFactory.resetEnterpriseService();
+  console.debug("[FizzBuzzIndex] SIGTERM received — initiating graceful shutdown via bootstrap");
+  if (EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
+    EnterpriseApplicationBootstrapInitializerFactoryBean.resetBootstrapInitializer();
+  } else {
+    const { FizzBuzzEnterpriseServiceFactoryBeanFactory } = require("./enterprise/FizzBuzzEnterpriseService.js");
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.resetEnterpriseService();
+  }
   console.debug("[FizzBuzzIndex] Graceful shutdown complete");
 });
 
 process.on("SIGINT", () => {
-  console.debug("[FizzBuzzIndex] SIGINT received — initiating graceful shutdown");
-  const { FizzBuzzEnterpriseServiceFactoryBeanFactory } = require("./enterprise/FizzBuzzEnterpriseService.js");
-  FizzBuzzEnterpriseServiceFactoryBeanFactory.resetEnterpriseService();
+  console.debug("[FizzBuzzIndex] SIGINT received — initiating graceful shutdown via bootstrap");
+  if (EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
+    EnterpriseApplicationBootstrapInitializerFactoryBean.resetBootstrapInitializer();
+  } else {
+    const { FizzBuzzEnterpriseServiceFactoryBeanFactory } = require("./enterprise/FizzBuzzEnterpriseService.js");
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.resetEnterpriseService();
+  }
   console.debug("[FizzBuzzIndex] Graceful shutdown complete");
 });
