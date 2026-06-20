@@ -9,6 +9,7 @@ import { AuditingFizzBuzzComputationCommandDecoratorImpl } from "../decorators/A
 import { OrchestratorEnabledFizzBuzzComputationCommandDecoratorImpl } from "../decorators/OrchestratorEnabledFizzBuzzComputationCommandDecoratorImpl.js";
 import { FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory } from "./FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory.js";
 import { ServiceLocatorFactoryBeanFactory } from "./ServiceLocatorFactoryBean.js";
+import { EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory } from "./EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
 import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
@@ -107,10 +108,15 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
     const serviceLocator = ServiceLocatorFactoryBeanFactory.createFactoryBean().createServiceLocator();
     const orchestrator =
       FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory.createOrchestrator(serviceLocator);
-    const computationCommand: IFizzBuzzComputationCommand =
+    const orchestratorDecoratedCommand: IFizzBuzzComputationCommand =
       new OrchestratorEnabledFizzBuzzComputationCommandDecoratorImpl(
         auditingDecorator,
         orchestrator,
+      );
+
+    const strategySelectedCommand: IFizzBuzzComputationCommand =
+      EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.createSelector(
+        orchestratorDecoratedCommand,
       );
 
     const computationTemplate =
@@ -119,11 +125,16 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
     const requestBuilder: IFizzBuzzComputationRequestBuilder =
       new FizzBuzzComputationRequestBuilderImpl();
 
-    return new FizzBuzzSingleValueResolutionFacadeImpl(
+    const delegateFacade = new FizzBuzzSingleValueResolutionFacadeImpl(
       requestBuilder,
       commandInvoker,
-      computationCommand,
+      strategySelectedCommand,
       computationTemplate,
+    );
+
+    return EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.createSelectionFacade(
+      delegateFacade,
+      strategySelectedCommand,
     );
   }
 
