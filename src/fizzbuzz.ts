@@ -191,6 +191,9 @@ import {
 } from "./enterprisedivisibilityorchestration/factories/EnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IEnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecorator } from "./enterprisedivisibilityorchestration/contracts/IEnterpriseDivisibilityOrchestrationAwareResolutionFacadeDecorator.js";
 import type { IEnterpriseDivisibilityOrchestrationStrategyResolver } from "./enterprisedivisibilityorchestration/contracts/IEnterpriseDivisibilityOrchestrationStrategyResolver.js";
+import { FizzBuzzInvocationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzInvocationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { FizzBuzzResolutionInvocationHandlerFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzResolutionInvocationHandlerFactoryBeanFactory.js";
+import { FizzBuzzResolutionProxyFactoryFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzResolutionProxyFactoryFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -804,7 +807,16 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
     }
   }
   {
-    if (!EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor()) {
+    if (!FizzBuzzResolutionInvocationHandlerFactoryBeanFactory.isHandlerInitialized()) {
+    const proxyHandler = FizzBuzzResolutionInvocationHandlerFactoryBeanFactory.createHandler();
+    const proxyFactory = FizzBuzzResolutionProxyFactoryFactoryBeanFactory.createProxyFactory();
+    console.debug(
+      `[ProxyInvocationInfrastructure] Enterprise dynamic proxy invocation infrastructure initialized: ` +
+      `handler=[${proxyHandler.getHandlerName()} v${proxyHandler.getHandlerVersion()}], ` +
+      `proxyFactory=[${proxyFactory.getFactoryName()} v${proxyFactory.getFactoryVersion()}]`,
+    );
+  }
+  if (!EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor()) {
       const bridgeImplementor =
         EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.createImplementor();
       const templateMethod =
@@ -1098,7 +1110,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
-    return wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
+    const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
+    return wrapWithInvocationProxyResolution(orchestrated);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1122,7 +1135,30 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
-    return wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
+    const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
+    return wrapWithInvocationProxyResolution(orchestrated);
+}
+
+function wrapWithInvocationProxyResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (FizzBuzzResolutionInvocationHandlerFactoryBeanFactory.isHandlerInitialized()) {
+    const invocationDecorator =
+      FizzBuzzInvocationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        true,
+      );
+    console.debug(
+      `[InvocationProxyResolutionDecorator] Dynamic proxy invocation resolution decorator applied: ` +
+      `decorator=[${invocationDecorator.getDecoratorName()} v${invocationDecorator.getDecoratorVersion()}], ` +
+      `handler=[${invocationDecorator.getInvocationHandler().getHandlerName()} v${invocationDecorator.getInvocationHandler().getHandlerVersion()}], ` +
+      `proxyFactory=[${invocationDecorator.getProxyFactory().getFactoryName()} v${invocationDecorator.getProxyFactory().getFactoryVersion()}], ` +
+      `proxyEnabled=[${invocationDecorator.isProxyInvocationEnabled()}], ` +
+      `wrappedFacade=[${invocationDecorator.getWrappedFacade().getFacadeName()}]`,
+    );
+    return invocationDecorator;
+  }
+  return facade;
 }
 
 function wrapWithEnterpriseDivisibilityOrchestration(
