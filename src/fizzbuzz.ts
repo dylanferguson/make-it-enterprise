@@ -39,6 +39,11 @@ import type { IEnterpriseComputationGovernancePolicyEnforcementFacade } from "./
 import { EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory, DivisibilityResolutionFacadeConfigurationProfile } from "./impl/factories/EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory.js";
 import { EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory } from "./impl/factories/EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory.js";
 import { DefaultConfigurationAwareResolutionFacadeDecoratorImpl } from "./impl/decorators/DefaultConfigurationAwareResolutionFacadeDecoratorImpl.js";
+import {
+  EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory,
+  DirectiveResolutionMediationOrchestratorConfigurationProfile,
+} from "./impl/factories/EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.js";
+import type { IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator } from "./contracts/IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator.js";
 
 let messagePropertyConfigurationInitialized = false;
 
@@ -134,10 +139,22 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `visitor=[${governanceFacade.getValidationVisitor().getVisitorName()} v${governanceFacade.getValidationVisitor().getVisitorVersion()}]`,
     );
   }
+  if (!EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.getOrchestrator()) {
+    const mediationOrchestrator = EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.createOrchestrator(
+      DirectiveResolutionMediationOrchestratorConfigurationProfile.STANDARD,
+    );
+    console.debug(
+      `[BootstrapGate] Directive resolution mediation orchestrator initialized: ` +
+      `orchestrator=[${mediationOrchestrator.getMediationOrchestratorName()} v${mediationOrchestrator.getMediationOrchestratorVersion()}], ` +
+      `strategies=[${mediationOrchestrator.getRegisteredMediationStrategyNames().join(", ")}], ` +
+      `activeStrategy=[${mediationOrchestrator.getActiveMediationStrategyName()}]`,
+    );
+  }
   return true;
 })();
 
 let governanceEnforcementFacade: IEnterpriseComputationGovernancePolicyEnforcementFacade | null = null;
+let mediationOrchestrator: IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator | null = null;
 
 function resolveGovernanceEnforcementFacade(): IEnterpriseComputationGovernancePolicyEnforcementFacade {
   if (governanceEnforcementFacade === null) {
@@ -147,6 +164,16 @@ function resolveGovernanceEnforcementFacade(): IEnterpriseComputationGovernanceP
       );
   }
   return governanceEnforcementFacade!;
+}
+
+function resolveMediationOrchestrator(): IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator {
+  if (mediationOrchestrator === null) {
+    mediationOrchestrator =
+      EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.createOrchestrator(
+        DirectiveResolutionMediationOrchestratorConfigurationProfile.STANDARD,
+      );
+  }
+  return mediationOrchestrator!;
 }
 
 function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
@@ -185,21 +212,18 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   return configurationAwareDecorator;
 }
 
-export function fizzBuzzValue(value: number): string {
+function resolveInnerSingleValue(value: number): string {
   const governanceFacade = resolveGovernanceEnforcementFacade();
   const facade = resolveResolutionFacade();
   return governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
 }
 
+export function fizzBuzzValue(value: number): string {
+  const orchestrator = resolveMediationOrchestrator();
+  return orchestrator.orchestrateDirectiveResolution(value, (v: number) => resolveInnerSingleValue(v));
+}
+
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const governanceFacade = resolveGovernanceEnforcementFacade();
-  const facade = resolveResolutionFacade();
-  const results: string[] = [];
-  for (let i = start; i <= end; i++) {
-    const idx = i;
-    results.push(
-      governanceFacade.enforceComputation(idx, (v: number) => facade.resolveValue(v)),
-    );
-  }
-  return results;
+  const orchestrator = resolveMediationOrchestrator();
+  return orchestrator.orchestrateRangeDirectiveResolution(start, end, (v: number) => resolveInnerSingleValue(v));
 }
