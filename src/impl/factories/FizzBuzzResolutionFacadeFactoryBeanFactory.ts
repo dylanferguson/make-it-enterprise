@@ -16,6 +16,7 @@ import { InMemoryComputationEventStoreImpl } from "../stores/InMemoryComputation
 import { EventSourcingFizzBuzzComputationCommandDecoratorImpl } from "../../patterns/EventSourcingFizzBuzzComputationCommandDecoratorImpl.js";
 import { StrategySelectorAwareFizzBuzzComputationCommandDecoratorImpl } from "../decorators/StrategySelectorAwareFizzBuzzComputationCommandDecoratorImpl.js";
 import { FlyweightManagedFizzBuzzComputationCommandDecoratorImpl } from "../decorators/FlyweightManagedFizzBuzzComputationCommandDecoratorImpl.js";
+import { AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl } from "../decorators/AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl.js";
 import { EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory } from "./EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
@@ -152,10 +153,15 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
         strategySelectorAwareCommand,
       );
 
+    const abstractDivisibilityProviderAwareCommand: IFizzBuzzComputationCommand =
+      new AbstractDivisibilityProviderAwareComputationCommandDecoratorImpl(
+        flyweightManagedCommand,
+      );
+
     const decoratorStack =
       EnterpriseFizzBuzzResolutionFacadeDecoratorStackFactory.createDecoratorStack();
     const stackedCommand: IFizzBuzzComputationCommand =
-      decoratorStack.buildDecoratorStack(flyweightManagedCommand);
+      decoratorStack.buildDecoratorStack(abstractDivisibilityProviderAwareCommand);
 
     const computationTemplate =
       FizzBuzzComputationTemplateFactoryBean.createTemplate();

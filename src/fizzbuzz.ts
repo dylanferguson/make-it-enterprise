@@ -52,6 +52,8 @@ import { StandardFizzBuzzRangeIteratorFactoryBeanFactory } from "./iterators/fac
 import type { IFizzBuzzComputationPipelineProduct } from "./builders/contracts/IFizzBuzzComputationPipelineBuilder.js";
 import type { IFizzBuzzRangeIterator } from "./iterators/contracts/IFizzBuzzRangeIterator.js";
 import { FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory } from "./builders/factories/FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.js";
+import { DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory } from "./divisibility/factories/DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.js";
+import { DivisibilityModuloEvaluationChainHandlerVisitorImpl } from "./divisibility/visitors/DivisibilityModuloEvaluationChainHandlerVisitorImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -143,6 +145,21 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `provider=[${configurationProvider.getConfigurationProviderName()} v${configurationProvider.getConfigurationProviderVersion()}], ` +
       `profile=[${configurationProvider.getConfigurationProfile()}], ` +
       `divisors=[${configurationProvider.getDivisorConstants().join(", ")}]`,
+    );
+  }
+  {
+    const divisibilityProvider = DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.initializeProviderInfrastructure();
+    const registeredDivisors = divisibilityProvider.getRegisteredDivisors();
+    const chainVisitor = new DivisibilityModuloEvaluationChainHandlerVisitorImpl();
+    const provider = DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.getProvider();
+    const registry = DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.getRegistry();
+    console.debug(
+      `[DivisibilityModuloEvaluationInfrastructure] Abstract divisibility strategy provider infrastructure initialized: ` +
+      `provider=[${provider?.getProviderName() ?? "N/A"} v${provider?.getProviderVersion() ?? "N/A"}], ` +
+      `registry=[${registry?.getRegistryName() ?? "N/A"} v${registry?.getRegistryVersion() ?? "N/A"}], ` +
+      `registeredFactoryBeans=[${registry?.getFactoryBeanCount() ?? 0}], ` +
+      `divisors=[${registeredDivisors.join(", ")}], ` +
+      `chainVisitor=[${chainVisitor.getVisitorName()} v${chainVisitor.getVisitorVersion()}]`,
     );
   }
   if (!EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.getCurrentFacade()) {
