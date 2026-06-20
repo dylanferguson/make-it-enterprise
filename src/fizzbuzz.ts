@@ -98,6 +98,9 @@ import { NumberDocumentNodeImpl } from "./document/impl/NumberDocumentNodeImpl.j
 import { UnresolvedDocumentNodeImpl } from "./document/impl/UnresolvedDocumentNodeImpl.js";
 import { ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory } from "./enterprisemodulo/factories/ModularArithmeticDivisibilityResolutionMediatorArchitectureFactoryBeanFactory.js";
 import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from "./enterprisemodulo/contracts/IModularArithmeticDivisibilityResolutionMediationVisitor.js";
+import { EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.js";
+import { EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory.js";
+import { DivisibilityExpressionFactoryBeanFactory } from "./expressionengine/factories/DivisibilityExpressionFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -341,6 +344,19 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `default locale=${new DefaultLocaleResolutionStrategyImpl().resolveLocale()}`,
       );
     }
+  }
+  {
+    const expressionRegistry = EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.createRegistry();
+    const expressionInterpreter = EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory.createInterpreter();
+    const expressionFactory = DivisibilityExpressionFactoryBeanFactory.createFactory();
+    console.debug(
+      `[ExpressionEngineInfrastructure] Enterprise divisibility expression interpreter pattern infrastructure initialized: ` +
+      `registry=[${expressionRegistry.getRegistryName()} v${expressionRegistry.getRegistryVersion()}], ` +
+      `interpreter=[${expressionInterpreter.getInterpreterName()} v${expressionInterpreter.getInterpreterVersion()}], ` +
+      `factory=[${expressionFactory.getFactoryName()} v${expressionFactory.getFactoryVersion()}], ` +
+      `evaluators=[${expressionRegistry.getRegisteredEvaluatorNames().join(", ")}], ` +
+      `evaluatorCount=[${expressionRegistry.getEvaluatorCount()}]`,
+    );
   }
   {
     const writer = FizzBuzzResultItemWriterFactoryBeanFactory.createWriter();
