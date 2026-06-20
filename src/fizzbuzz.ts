@@ -229,8 +229,10 @@ import type { IResultValidationSpecificationAwareResolutionFacadeDecorator } fro
 import { DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl } from "./resultvalidationspecification/impl/DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl.js";
 import { ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory } from "./modulocomputation/factories/ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.js";
 import type { IModuloRemainderComputationInfrastructure } from "./modulocomputation/factories/ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.js";
-import { ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./modulocomputation/factories/ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IModuloRemainderComputationAwareResolutionFacadeDecorator } from "./modulocomputation/contracts/IModuloRemainderComputationAwareResolutionFacadeDecorator.js";
+import { ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./modulocomputation/factories/ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory } from "./enterpriseresolutionlifecycle/factories/EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory.js";
+import type { IEnterpriseComputationResolutionLifecycleOrchestrator } from "./enterpriseresolutionlifecycle/contracts/IEnterpriseComputationResolutionLifecycleOrchestrator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -1027,6 +1029,31 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `visitedSpecNames=[${visitor.getVisitedSpecificationNames().join(", ")}]`,
       );
     }
+  }
+  if (!EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory.isInfrastructureInitialized()) {
+    const directiveBuilder =
+      EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory.createBuilder();
+    const directiveConfig = directiveBuilder
+      .withVisitorRegistrationEnabled(true)
+      .withValidationEnabled(true)
+      .withChainOfResponsibilityEnabled(true)
+      .withLifecycleStateTrackingEnabled(true)
+      .withOrchestratorDescriptor("ENTERPRISE_RESOLUTION_LIFECYCLE_STANDARD")
+      .build();
+    const lifecycleOrchestrator =
+      EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory
+        .initializeLifecycleOrchestrationInfrastructure(directiveConfig);
+    console.debug(
+      `[EnterpriseResolutionLifecycleInfrastructure] Enterprise computation outcome lifecycle ` +
+      `resolution orchestration infrastructure initialized: ` +
+      `orchestrator=[${lifecycleOrchestrator.getOrchestratorName()} v${lifecycleOrchestrator.getOrchestratorVersion()}], ` +
+      `descriptor=[${lifecycleOrchestrator.getOrchestratorDescriptor()}], ` +
+      `state=[${lifecycleOrchestrator.getCurrentState().getStateName()} v${lifecycleOrchestrator.getCurrentState().getStateVersion()}], ` +
+      `visitors=[${lifecycleOrchestrator.getRegisteredVisitors().length}], ` +
+      `validators=[${lifecycleOrchestrator.getRegisteredValidators().length}], ` +
+      `chainHead=[${lifecycleOrchestrator.getChainHead()?.getHandlerName() ?? "null"} v${lifecycleOrchestrator.getChainHead()?.getHandlerVersion() ?? "N/A"}], ` +
+      `history=[${lifecycleOrchestrator.getStateTransitionHistory().join(" -> ") || "empty"}]`,
+    );
   }
   return true;
 })();
@@ -2058,16 +2085,44 @@ function resolveEndpointServiceActivator(): FizzBuzzEndpointAwareServiceActivato
   return endpointServiceActivator!;
 }
 
-export function fizzBuzzValue(value: number): string {
+function resolveInnerSingleValueWithLifecycleOrchestration(value: number): string {
   const invoker = resolveCommandInvoker();
   const facade = resolvePublicApiSessionFacade();
   const command = FizzBuzzComputationCommandFactoryBeanFactory.createValueCommand(value, facade);
   return invoker.invokeValue(command);
 }
 
-export function fizzBuzzRange(start: number, end: number): readonly string[] {
+function resolveInnerRangeWithLifecycleOrchestration(start: number, end: number): readonly string[] {
   const invoker = resolveCommandInvoker();
   const facade = resolvePublicApiSessionFacade();
   const command = FizzBuzzComputationCommandFactoryBeanFactory.createRangeCommand(start, end, facade);
   return invoker.invokeRange(command);
+}
+
+let lifecycleOrchestratorForExport: IEnterpriseComputationResolutionLifecycleOrchestrator | null = null;
+
+function resolveLifecycleOrchestratorForExport(): IEnterpriseComputationResolutionLifecycleOrchestrator {
+  if (lifecycleOrchestratorForExport === null) {
+    lifecycleOrchestratorForExport =
+      EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory
+        .initializeLifecycleOrchestrationInfrastructure();
+  }
+  return lifecycleOrchestratorForExport;
+}
+
+export function fizzBuzzValue(value: number): string {
+  const orchestrator = resolveLifecycleOrchestratorForExport();
+  return orchestrator.orchestrateSingleValueResolution(
+    value,
+    (v: number) => resolveInnerSingleValueWithLifecycleOrchestration(v),
+  );
+}
+
+export function fizzBuzzRange(start: number, end: number): readonly string[] {
+  const orchestrator = resolveLifecycleOrchestratorForExport();
+  return orchestrator.orchestrateRangeResolution(
+    start,
+    end,
+    (v: number) => resolveInnerSingleValueWithLifecycleOrchestration(v),
+  );
 }
