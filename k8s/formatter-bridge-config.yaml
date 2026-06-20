@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enterprise-fizzBuzz-formatter-bridge-config
+  labels:
+    app.kubernetes.io/name: fizzbuzz-enterprise
+    app.kubernetes.io/component: formatter-bridge
+    app.kubernetes.io/version: "1.0.0"
+data:
+  FORMATTER_BRIDGE_IMPLEMENTATION_TYPE: "FLYWEIGHT_CACHING_FORMATTER_BRIDGE_DECORATOR"
+  FORMATTER_BRIDGE_FLYWEIGHT_CAPACITY: "256"
+  FORMATTER_BRIDGE_VISITOR_CHAIN_ENABLED: "true"
+  FORMATTER_BRIDGE_DIAGNOSTIC_LOGGING_ENABLED: "true"
+  FORMATTER_BRIDGE_CACHE_EVICTION_POLICY: "FIFO"
+  FORMATTER_BRIDGE_DEFAULT_VISITOR: "StandardEnterpriseFizzBuzzResultFormattingVisitorImpl"

@@ -198,6 +198,9 @@ import { FizzBuzzComputationCommandFactoryBeanFactory } from "./computationcomma
 import type { IFizzBuzzComputationCommandInvoker } from "./computationcommand/contracts/IFizzBuzzComputationCommandInvoker.js";
 import { EnterpriseFizzBuzzPublicApiSessionFacadeFactoryBeanFactory } from "./enterprisefacade/factories/EnterpriseFizzBuzzPublicApiSessionFacadeFactoryBeanFactory.js";
 import type { IEnterpriseFizzBuzzPublicApiSessionFacade } from "./enterprisefacade/contracts/IEnterpriseFizzBuzzPublicApiSessionFacade.js";
+import { EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory } from "./computationformatter/factories/EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.js";
+import type { IEnterpriseFizzBuzzResultFormatterBridge } from "./computationformatter/contracts/IEnterpriseFizzBuzzResultFormatterBridge.js";
+import { AbstractBaseEnterpriseFizzBuzzResultFormatterBridgeImpl } from "./computationformatter/abstract/AbstractBaseEnterpriseFizzBuzzResultFormatterBridgeImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -820,6 +823,16 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `proxyFactory=[${proxyFactory.getFactoryName()} v${proxyFactory.getFactoryVersion()}]`,
     );
   }
+  if (!EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.isFactoryBeanInitialized()) {
+    const formatterVisitors = EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.createDefaultVisitors();
+    EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.initializeFactoryBeanInfrastructure();
+    console.debug(
+      `[EnterpriseFizzBuzzResultFormatterBridgeInfrastructure] Formatter bridge infrastructure initialized: ` +
+      `factoryBean=[${EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.getFactoryBeanName()} v${EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.getFactoryBeanVersion()}], ` +
+      `visitors=[${formatterVisitors.map((v) => `${v.getVisitorName()}@${v.getVisitorDescriptor()}`).join(", ")}], ` +
+      `initialized=[${EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.isFactoryBeanInitialized()}]`,
+    );
+  }
   if (!EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor()) {
       const bridgeImplementor =
         EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.createImplementor();
@@ -1115,7 +1128,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
-    return wrapWithInvocationProxyResolution(orchestrated);
+    const proxied = wrapWithInvocationProxyResolution(orchestrated);
+    return wrapWithFormatterBridgeResolution(proxied);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1140,7 +1154,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
-    return wrapWithInvocationProxyResolution(orchestrated);
+    const proxied = wrapWithInvocationProxyResolution(orchestrated);
+    return wrapWithFormatterBridgeResolution(proxied);
 }
 
 function wrapWithInvocationProxyResolution(
@@ -1472,6 +1487,29 @@ function wrapWithJaasSecurityResolution(
       `securityEnabled=[${securityInfo.isSecurityEnabled()}]`,
     );
     return securityDecorator;
+  }
+  return facade;
+}
+
+function wrapWithFormatterBridgeResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.isFactoryBeanInitialized()) {
+    const visitors = EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.createDefaultVisitors();
+    const bridge = EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.createFormatterBridge(facade, visitors);
+    const flyweightBridge = EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.createFlyweightCachingFormatterBridge(
+      bridge as AbstractBaseEnterpriseFizzBuzzResultFormatterBridgeImpl,
+    );
+    console.debug(
+      `[FormatterBridgeResolutionDecorator] Enterprise formatter bridge resolution decorator applied: ` +
+      `bridge=[${bridge.getBridgeName()} v${bridge.getBridgeVersion()}], ` +
+      `flyweightDecorator=[${flyweightBridge.getBridgeName()} v${flyweightBridge.getBridgeVersion()}], ` +
+      `visitors=[${visitors.map((v) => v.getVisitorDescriptor()).join(", ")}], ` +
+      `bridgeType=[${bridge.getBridgeImplementationType()}], ` +
+      `flyweightCacheEnabled=[${flyweightBridge.isFormatterBridgeEnabled()}], ` +
+      `wrappedFacade=[${facade.getFacadeName()}]`,
+    );
+    return flyweightBridge;
   }
   return facade;
 }
