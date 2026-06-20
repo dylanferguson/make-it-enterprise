@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-composite-strategy-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: composite-strategy
+    version: "1.0.0"
+data:
+  composite-strategy-profile: "STANDARD_FIZZBUZZ"
+  composite-resolution-enabled: "true"
+  composite-tree-builder-version: "1.0.0-COMPOSITE-BUILDER"
+  composite-tree-factory-bean-version: "1.0.0-COMPOSITE-FACTORY"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-strategy-tree-node-definitions
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: strategy-tree-nodes
+    version: "1.0.0"
+data:
+  nodes: |
+    [
+      { "name": "fizzDivisibleByThree", "type": "LEAF", "divisor": 3, "label": "Fizz", "priority": 50 },
+      { "name": "buzzDivisibleByFive", "type": "LEAF", "divisor": 5, "label": "Buzz", "priority": 40 },
+      { "name": "fizzBuzzCombination", "type": "BRANCH", "combination": "APPEND", "children": ["fizzDivisibleByThree", "buzzDivisibleByFive"], "priority": 100 },
+      { "name": "defaultNumberLeaf", "type": "LEAF", "divisor": 0, "label": "__DEFAULT__", "priority": -100 },
+      { "name": "fizzBuzzEvaluationRoot", "type": "BRANCH", "combination": "FIRST_MATCH", "children": ["fizzBuzzCombination", "defaultNumberLeaf"], "priority": 1000 }
+    ]
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fizzbuzz-composite-strategy-alerts
+  namespace: fizzbuzz-enterprise
+  labels:
+    app: fizzbuzz
+    component: composite-alerts
+spec:
+  groups:
+    - name: fizzbuzz-composite-strategy
+      interval: 30s
+      rules:
+        - alert: CompositeResolutionFallbackHigh
+          expr: rate(fizzbuzz_composite_delegated_total[5m]) > rate(fizzbuzz_composite_resolved_total[5m]) * 10
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Composite strategy tree delegation rate exceeds resolution rate by 10x"
+            description: "The composite strategy tree is falling back to the enterprise chain at a high rate. Check composite tree configuration profile."
+        - alert: CompositeResolutionDisabled
+          expr: fizzbuzz_composite_resolution_enabled == 0
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "Composite strategy resolution is disabled"
+            description: "The composite resolution delegate has been disabled. FizzBuzz computation is using the enterprise command chain exclusively."

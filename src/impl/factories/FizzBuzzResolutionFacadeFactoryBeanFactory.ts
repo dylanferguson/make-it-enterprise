@@ -10,6 +10,8 @@ import { OrchestratorEnabledFizzBuzzComputationCommandDecoratorImpl } from "../d
 import { FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory } from "./FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory.js";
 import { ServiceLocatorFactoryBeanFactory } from "./ServiceLocatorFactoryBean.js";
 import { EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory } from "./EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.js";
+import { CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl } from "../decorators/CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl.js";
+import { CompositeStrategyTreeFactoryBeanFactory, CompositeStrategyTreeConfigurationProfile } from "./CompositeStrategyTreeFactoryBeanFactory.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
 import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
@@ -119,6 +121,16 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
         orchestratorDecoratedCommand,
       );
 
+    const compositeStrategyTree =
+      CompositeStrategyTreeFactoryBeanFactory.createCompositeStrategyTree(
+        CompositeStrategyTreeConfigurationProfile.STANDARD_FIZZBUZZ,
+      );
+    const compositeAwareCommand: IFizzBuzzComputationCommand =
+      new CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl(
+        strategySelectedCommand,
+        compositeStrategyTree,
+      );
+
     const computationTemplate =
       FizzBuzzComputationTemplateFactoryBean.createTemplate();
 
@@ -128,13 +140,13 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
     const delegateFacade = new FizzBuzzSingleValueResolutionFacadeImpl(
       requestBuilder,
       commandInvoker,
-      strategySelectedCommand,
+      compositeAwareCommand,
       computationTemplate,
     );
 
     return EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.createSelectionFacade(
       delegateFacade,
-      strategySelectedCommand,
+      compositeAwareCommand,
     );
   }
 
