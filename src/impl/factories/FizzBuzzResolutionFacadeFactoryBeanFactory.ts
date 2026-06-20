@@ -12,6 +12,8 @@ import { ServiceLocatorFactoryBeanFactory } from "./ServiceLocatorFactoryBean.js
 import { EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory } from "./EnterpriseComputationStrategySelectionFacadeFactoryBeanFactory.js";
 import { CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl } from "../decorators/CompositeStrategyAwareFizzBuzzComputationCommandDecoratorImpl.js";
 import { CompositeStrategyTreeFactoryBeanFactory, CompositeStrategyTreeConfigurationProfile } from "./CompositeStrategyTreeFactoryBeanFactory.js";
+import { InMemoryComputationEventStoreImpl } from "../stores/InMemoryComputationEventStoreImpl.js";
+import { EventSourcingFizzBuzzComputationCommandDecoratorImpl } from "../../patterns/EventSourcingFizzBuzzComputationCommandDecoratorImpl.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
 import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
@@ -107,12 +109,18 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
       new AuditingFizzBuzzComputationCommandDecoratorImpl(
         cachingDecorator,
       );
+    const eventStore = new InMemoryComputationEventStoreImpl();
+    const eventSourcingDecorator =
+      new EventSourcingFizzBuzzComputationCommandDecoratorImpl(
+        auditingDecorator,
+        eventStore,
+      );
     const serviceLocator = ServiceLocatorFactoryBeanFactory.createFactoryBean().createServiceLocator();
     const orchestrator =
       FizzBuzzEnterpriseComputationOrchestratorFactoryBeanFactory.createOrchestrator(serviceLocator);
     const orchestratorDecoratedCommand: IFizzBuzzComputationCommand =
       new OrchestratorEnabledFizzBuzzComputationCommandDecoratorImpl(
-        auditingDecorator,
+        eventSourcingDecorator,
         orchestrator,
       );
 
