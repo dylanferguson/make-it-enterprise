@@ -97,6 +97,30 @@ contracts as UML. Editable Mermaid sources live in [`docs/diagrams`](docs/diagra
 
 [![UML class diagram of the FizzBuzz Enterprise system](docs/diagrams/system-uml.svg)](docs/architecture.md#system-uml)
 
+**A few architectural observations**
+
+- **The public API has acquired a lobby.** `fizzBuzzValue` and
+   `fizzBuzzRange` now pass through a lifecycle orchestrator, command invoker,
+   value command, session facade, and SOAP-shaped endpoint before reaching the
+   `PipelineManagerResolutionStrategySelector`. From there the call continues
+   through the pipeline manager, delegation orchestrator, business delegate,
+   governance facade, public API resolution delegate, and finally the
+   resolution facade.
+- **Fourteen named decorator layers stand between intent and arithmetic.**
+   The active public-delegate path wraps its expression-tree command in ten
+   command decorators, then adds four facade decorators for validation,
+   interception, configuration, and document rendering. Governance and
+   directive mediation happen outside that count.
+- **Bootstrap is no longer a phase; it is a census.** `fizzbuzz.ts` contains
+   31 explicit initialization calls across 29 factory families, before
+   counting components created without an `initialize…` method. JMS, JMX,
+   JNDI/EJB, RMI, CORBA, JAAS, transactions, state machines, persistence,
+   localization, batch processing, caching, expression interpretation, and a
+   seven-layer remainder protocol stack all report for duty.
+- **Factory production became its own economic sector.** The source contains
+   210 distinct identifiers ending in `FactoryBeanFactory`, culminating in
+   `EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory`.
+
 ## Did it still work?
 
 Yes. In the exported result, all five original tests pass, both TypeScript
