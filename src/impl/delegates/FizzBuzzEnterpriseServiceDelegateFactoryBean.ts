@@ -2,7 +2,7 @@ import type { IEnterpriseServiceBean } from "../../contracts/IEnterpriseServiceB
 import type { ITransactionManager } from "../../contracts/ITransactionManager.js";
 import type { IComputationEventNotificationBus } from "../../contracts/IComputationEventNotificationBus.js";
 import type { IFizzBuzzServiceDelegate } from "../../contracts/IFizzBuzzServiceDelegate.js";
-import { FizzBuzzEnterpriseServiceDelegateImpl } from "../delegates/FizzBuzzEnterpriseServiceDelegateImpl.js";
+import { FizzBuzzEnterpriseServiceDelegateImpl } from "./FizzBuzzEnterpriseServiceDelegateImpl.js";
 
 export class FizzBuzzEnterpriseServiceDelegateFactoryBean {
   private static readonly FACTORY_BEAN_NAME = "FizzBuzzEnterpriseServiceDelegateFactoryBean";

@@ -5,7 +5,7 @@ import type {
   FizzBuzzRangeComputationEndpointResponse,
   IFizzBuzzEnterpriseServiceEndpointDispatcher,
   IFizzBuzzEnterpriseServiceEndpoint,
-} from "../endpoint/contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
+} from "./contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
 
 function generateServiceActivatorRequestId(): string {
   return `SA-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;

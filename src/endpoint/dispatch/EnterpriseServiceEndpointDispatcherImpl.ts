@@ -1,6 +1,6 @@
 import type {
   IFizzBuzzEnterpriseServiceEndpointDispatcher,
-} from "../../endpoint/contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
+} from "../contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
 import {
   IFizzBuzzEnterpriseServiceEndpoint,
   FizzBuzzSingleValueComputationEndpointRequest,

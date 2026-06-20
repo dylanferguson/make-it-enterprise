@@ -1,7 +1,7 @@
 import type { IDivisibilitySpecificationRegistry } from "../../specification/contracts/IDivisibilitySpecificationRegistry.js";
 import type { IModuloArithmeticCommandInvoker } from "../../moduloarithmeticcommand/contracts/IModuloArithmeticCommandInvoker.js";
 import type { IModuloArithmeticCommand } from "../../moduloarithmeticcommand/contracts/IModuloArithmeticCommand.js";
-import { AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandler } from "../../templatemethod/abstracts/AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandler.js";
+import { AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandler } from "../abstracts/AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandler.js";
 
 export class SpecificationDrivenEnterpriseFizzBuzzTemplateMethodResolutionChainHandlerImpl
   extends AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandler

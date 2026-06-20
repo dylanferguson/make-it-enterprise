@@ -1,6 +1,6 @@
-import type { IFizzBuzzExpression } from "../contracts/IFizzBuzzExpression.js";
-import type { IFizzBuzzRuleDefinition } from "../contracts/IFizzBuzzRuleDefinition.js";
-import type { IFizzBuzzRuleSet } from "../contracts/IFizzBuzzRuleSet.js";
+import type { IFizzBuzzExpression } from "./IFizzBuzzExpression.js";
+import type { IFizzBuzzRuleDefinition } from "./IFizzBuzzRuleDefinition.js";
+import type { IFizzBuzzRuleSet } from "./IFizzBuzzRuleSet.js";
 
 export interface IFizzBuzzExpressionTreeBuilder {
   buildDivisibleByExpression(divisor: number): IFizzBuzzExpression;

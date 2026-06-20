@@ -1,7 +1,7 @@
 import { AbstractBaseDivisibilityModuloEvaluationFactoryBean } from "../abstracts/AbstractBaseDivisibilityModuloEvaluationFactoryBean.js";
 import type { IDivisibilityModuloEvaluationChainHandler } from "../contracts/IDivisibilityModuloEvaluationChainHandler.js";
-import { StandardDivisibilityModuloEvaluationChainHandlerImpl } from "../impl/StandardDivisibilityModuloEvaluationChainHandlerImpl.js";
-import { DecorativeValidationDivisibilityModuloEvaluationChainHandlerImpl } from "../impl/DecorativeValidationDivisibilityModuloEvaluationChainHandlerImpl.js";
+import { StandardDivisibilityModuloEvaluationChainHandlerImpl } from "./StandardDivisibilityModuloEvaluationChainHandlerImpl.js";
+import { DecorativeValidationDivisibilityModuloEvaluationChainHandlerImpl } from "./DecorativeValidationDivisibilityModuloEvaluationChainHandlerImpl.js";
 import { DivisibilityModuloEvaluationChainBuilderImpl } from "../factories/DivisibilityModuloEvaluationChainBuilderImpl.js";
 
 export class StandardDivisibilityModuloEvaluationFactoryBeanImpl

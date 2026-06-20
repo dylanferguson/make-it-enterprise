@@ -1,4 +1,4 @@
-import type { IDivisibilitySpecificationStrategy } from "../contracts/IDivisibilitySpecificationStrategy.js";
+import type { IDivisibilitySpecificationStrategy } from "./IDivisibilitySpecificationStrategy.js";
 
 export interface ICompositeDivisibilitySpecificationStrategy extends IDivisibilitySpecificationStrategy {
   getLeftSpecification(): IDivisibilitySpecificationStrategy;

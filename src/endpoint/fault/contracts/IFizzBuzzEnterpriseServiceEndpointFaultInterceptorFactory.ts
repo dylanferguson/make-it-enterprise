@@ -1,4 +1,4 @@
-import type { IFizzBuzzEnterpriseServiceEndpointFaultInterceptor } from "../../../endpoint/contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
+import type { IFizzBuzzEnterpriseServiceEndpointFaultInterceptor } from "../../contracts/IFizzBuzzEnterpriseServiceEndpoint.js";
 
 export interface IFizzBuzzEnterpriseServiceEndpointFaultInterceptorFactory {
   createFaultInterceptor(

@@ -1,6 +1,6 @@
 import type { IJndiContextFactory } from "../contracts/IJndiContextFactory.js";
 import type { IJndiInitialContext } from "../contracts/IJndiInitialContext.js";
-import { StandardJndiInitialContextImpl } from "../impl/StandardJndiInitialContextImpl.js";
+import { StandardJndiInitialContextImpl } from "./StandardJndiInitialContextImpl.js";
 
 export class StandardJndiContextFactoryImpl implements IJndiContextFactory {
   private static readonly FACTORY_NAME = "StandardJndiContextFactory";

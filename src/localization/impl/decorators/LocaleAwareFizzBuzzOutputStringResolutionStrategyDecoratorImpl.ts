@@ -1,10 +1,10 @@
 import type { IFizzBuzzOutputStringResolutionStrategy } from "../../../outputresolution/contracts/index.js";
 import type { ILocalizedMessageResolver } from "../../contracts/ILocalizedMessageResolver.js";
 import type { ILocaleResolutionStrategy } from "../../contracts/ILocaleResolutionStrategy.js";
-import { FizzBuzzOutputMessageCode } from "../../impl/messagecodes/FizzBuzzOutputMessageCodeImpl.js";
-import { LocalizedMessageResolverFactoryBeanFactory } from "../../impl/factories/LocalizedMessageResolverFactoryBeanFactory.js";
-import { LocaleResolutionStrategyFactoryBeanFactory } from "../../impl/factories/LocaleResolutionStrategyFactoryBeanFactory.js";
-import { DefaultLocaleResolutionStrategyImpl } from "../../impl/locales/DefaultLocaleResolutionStrategyImpl.js";
+import { FizzBuzzOutputMessageCode } from "../messagecodes/FizzBuzzOutputMessageCodeImpl.js";
+import { LocalizedMessageResolverFactoryBeanFactory } from "../factories/LocalizedMessageResolverFactoryBeanFactory.js";
+import { LocaleResolutionStrategyFactoryBeanFactory } from "../factories/LocaleResolutionStrategyFactoryBeanFactory.js";
+import { DefaultLocaleResolutionStrategyImpl } from "../locales/DefaultLocaleResolutionStrategyImpl.js";
 
 export class LocaleAwareFizzBuzzOutputStringResolutionStrategyDecoratorImpl
   implements IFizzBuzzOutputStringResolutionStrategy

@@ -1,7 +1,7 @@
 import type { IResolutionDelegationConfigurator } from "../contracts/IResolutionDelegationConfigurator.js";
 import type { IResolutionDelegationConfiguratorBuilder } from "../contracts/IResolutionDelegationConfiguratorBuilder.js";
 import { AbstractBaseResolutionDelegationConfiguratorBuilder } from "../abstracts/AbstractBaseResolutionDelegationConfiguratorBuilder.js";
-import { DefaultResolutionDelegationConfiguratorImpl } from "../impl/DefaultResolutionDelegationConfiguratorImpl.js";
+import { DefaultResolutionDelegationConfiguratorImpl } from "./DefaultResolutionDelegationConfiguratorImpl.js";
 
 export class DefaultResolutionDelegationConfiguratorBuilderImpl
   extends AbstractBaseResolutionDelegationConfiguratorBuilder

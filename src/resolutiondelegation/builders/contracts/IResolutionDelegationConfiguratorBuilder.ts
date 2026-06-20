@@ -1,4 +1,4 @@
-import type { IResolutionDelegationConfigurator } from "../contracts/IResolutionDelegationConfigurator.js";
+import type { IResolutionDelegationConfigurator } from "./IResolutionDelegationConfigurator.js";
 
 export interface IResolutionDelegationConfiguratorBuilder {
   withOrchestratorName(name: string): IResolutionDelegationConfiguratorBuilder;

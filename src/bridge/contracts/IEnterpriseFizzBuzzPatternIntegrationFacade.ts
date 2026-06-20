@@ -1,4 +1,4 @@
-import type { IFizzBuzzComputationBridgeAbstraction } from "../../bridge/contracts/IFizzBuzzComputationBridgeAbstraction.js";
+import type { IFizzBuzzComputationBridgeAbstraction } from "./IFizzBuzzComputationBridgeAbstraction.js";
 import { ComputationTypeFlyweightFactoryImpl } from "../../flyweight/impl/factory/ComputationTypeFlyweightFactoryImpl.js";
 import type { IComputationPrototypeRegistry } from "../../prototype/contracts/IComputationPrototypeRegistry.js";
 

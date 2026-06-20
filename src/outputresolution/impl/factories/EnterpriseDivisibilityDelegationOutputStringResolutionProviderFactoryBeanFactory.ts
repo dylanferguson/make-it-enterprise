@@ -1,5 +1,5 @@
 import type { IEnterpriseDivisibilityFacadeBackedOutputStringResolutionProvider } from "../../../contracts/IEnterpriseDivisibilityDelegationOutputStringResolutionProviderFactory.js";
-import { DefaultEnterpriseDivisibilityDelegationOutputStringResolutionProviderFactoryImpl } from "../factories/DefaultEnterpriseDivisibilityDelegationOutputStringResolutionProviderFactoryImpl.js";
+import { DefaultEnterpriseDivisibilityDelegationOutputStringResolutionProviderFactoryImpl } from "./DefaultEnterpriseDivisibilityDelegationOutputStringResolutionProviderFactoryImpl.js";
 import { EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory, DivisibilityResolutionFacadeConfigurationProfile } from "../../../impl/factories/EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory.js";
 
 export class EnterpriseDivisibilityDelegationOutputStringResolutionProviderFactoryBeanFactory {

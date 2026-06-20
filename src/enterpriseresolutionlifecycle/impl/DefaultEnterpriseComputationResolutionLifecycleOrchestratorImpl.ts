@@ -1,9 +1,9 @@
 import { AbstractBaseEnterpriseComputationResolutionLifecycleOrchestratorImpl } from "../abstracts/AbstractBaseEnterpriseComputationResolutionLifecycleOrchestratorImpl.js";
-import { ComputedComputationOutcomeLifecycleStateImpl } from "../impl/states/ComputedComputationOutcomeLifecycleStateImpl.js";
-import { ValidatingComputationOutcomeLifecycleStateImpl } from "../impl/states/ValidatingComputationOutcomeLifecycleStateImpl.js";
-import { ValidatedComputationOutcomeLifecycleStateImpl } from "../impl/states/ValidatedComputationOutcomeLifecycleStateImpl.js";
-import { FormattingComputationOutcomeLifecycleStateImpl } from "../impl/states/FormattingComputationOutcomeLifecycleStateImpl.js";
-import { FormattedComputationOutcomeLifecycleStateImpl } from "../impl/states/FormattedComputationOutcomeLifecycleStateImpl.js";
+import { ComputedComputationOutcomeLifecycleStateImpl } from "./states/ComputedComputationOutcomeLifecycleStateImpl.js";
+import { ValidatingComputationOutcomeLifecycleStateImpl } from "./states/ValidatingComputationOutcomeLifecycleStateImpl.js";
+import { ValidatedComputationOutcomeLifecycleStateImpl } from "./states/ValidatedComputationOutcomeLifecycleStateImpl.js";
+import { FormattingComputationOutcomeLifecycleStateImpl } from "./states/FormattingComputationOutcomeLifecycleStateImpl.js";
+import { FormattedComputationOutcomeLifecycleStateImpl } from "./states/FormattedComputationOutcomeLifecycleStateImpl.js";
 
 export class DefaultEnterpriseComputationResolutionLifecycleOrchestratorImpl
   extends AbstractBaseEnterpriseComputationResolutionLifecycleOrchestratorImpl

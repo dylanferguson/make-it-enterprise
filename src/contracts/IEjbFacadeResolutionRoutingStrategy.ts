@@ -1,4 +1,4 @@
-import type { IFizzBuzzSingleValueResolutionFacade } from "../contracts/IFizzBuzzSingleValueResolutionFacade.js";
+import type { IFizzBuzzSingleValueResolutionFacade } from "./IFizzBuzzSingleValueResolutionFacade.js";
 
 export interface IEjbFacadeResolutionRoutingStrategy {
   getRoutingStrategyName(): string;
