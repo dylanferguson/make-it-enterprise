@@ -4,6 +4,8 @@ import {
 import {
   EnterpriseApplicationBootstrapInitializerFactoryBean,
 } from "./impl/factories/EnterpriseApplicationBootstrapInitializerFactoryBean.js";
+import { DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory } from "./impl/factories/DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseDeploymentAwareBootstrapDecorator } from "./contracts/IEnterpriseDeploymentAwareBootstrapDecorator.js";
 import type {
   IFizzBuzzSingleValueResolutionFacade,
 } from "./contracts/IFizzBuzzSingleValueResolutionFacade.js";
@@ -25,8 +27,22 @@ import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/
 import { DefaultValidationEnforcementMetricsCollectorImpl } from "./impl/validation/DefaultValidationEnforcementMetricsCollectorImpl.js";
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
+  let deploymentDecorator: IEnterpriseDeploymentAwareBootstrapDecorator | null = null;
   if (!EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
-    EnterpriseApplicationBootstrapInitializerFactoryBean.createBootstrapInitializer(true);
+    const initializer = EnterpriseApplicationBootstrapInitializerFactoryBean.createBootstrapInitializer(true);
+    deploymentDecorator =
+      DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.createDecorator(initializer);
+  } else {
+    deploymentDecorator =
+      DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.getDecorator();
+  }
+  if (deploymentDecorator !== null && !deploymentDecorator.getDeploymentPlan().getRegisteredDescriptorNames().length) {
+    deploymentDecorator.applyDeploymentConfiguration();
+    console.debug(
+      `[BootstrapGate] Deployment descriptor-driven configuration applied: ` +
+      `${deploymentDecorator.getEntityBeanRegistrationCount()} entity bean(s), ` +
+      `${deploymentDecorator.getRegisteredJndiBindingCount()} JNDI binding(s)`,
+    );
   }
   if (!FizzBuzzEnterpriseApplicationContextFactoryBean.isContextInitialized()) {
     FizzBuzzEnterpriseApplicationContextFactoryBean.createApplicationContext("STANDARD");

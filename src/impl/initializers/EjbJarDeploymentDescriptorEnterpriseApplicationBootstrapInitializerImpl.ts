@@ -1,6 +1,8 @@
 import { AbstractBaseEnterpriseApplicationBootstrapInitializer } from "../../abstracts/AbstractBaseEnterpriseApplicationBootstrapInitializer.js";
 import type { IEnterpriseApplicationBootstrapInitializer } from "../../contracts/IEnterpriseApplicationBootstrapInitializer.js";
 import { FizzBuzzEnterpriseApplicationContextFactoryBean } from "../factories/FizzBuzzEnterpriseApplicationContextFactoryBeanFactory.js";
+import { DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory } from "../factories/DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseDeploymentAwareBootstrapDecorator } from "../../contracts/IEnterpriseDeploymentAwareBootstrapDecorator.js";
 import { ApplicationContextInitializationException } from "../../exceptions/ApplicationContextInitializationException.js";
 
 export class EjbJarDeploymentDescriptorEnterpriseApplicationBootstrapInitializerImpl
@@ -20,6 +22,7 @@ export class EjbJarDeploymentDescriptorEnterpriseApplicationBootstrapInitializer
 
   private ejbBeanDefinitionsCount: number = 0;
   private initializationElapsedMs: number = 0;
+  private deploymentDecorator: IEnterpriseDeploymentAwareBootstrapDecorator | null = null;
 
   constructor() {
     super(
@@ -42,6 +45,10 @@ export class EjbJarDeploymentDescriptorEnterpriseApplicationBootstrapInitializer
         `[${this.getBootstrapInitializerName()}] Parsing EJB deployment descriptors from ${this.getDeploymentDescriptorPaths().length} descriptor(s)...`,
       );
 
+      this.deploymentDecorator =
+        DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.createDecorator(this);
+      this.deploymentDecorator.applyDeploymentConfiguration();
+
       this.parseDeploymentDescriptors();
 
       const context = FizzBuzzEnterpriseApplicationContextFactoryBean.createApplicationContext("STANDARD");
@@ -55,7 +62,9 @@ export class EjbJarDeploymentDescriptorEnterpriseApplicationBootstrapInitializer
 
       console.debug(
         `[${this.getBootstrapInitializerName()}] Bootstrap initialization complete. ` +
-        `${this.ejbBeanDefinitionsCount} EJB bean definition(s) registered. ` +
+        `${this.ejbBeanDefinitionsCount} EJB bean definition(s) registered ` +
+        `(${this.deploymentDecorator.getEntityBeanRegistrationCount()} from XML descriptors). ` +
+        `${this.deploymentDecorator.getRegisteredJndiBindingCount()} JNDI binding(s) established. ` +
         `Context: ${context.getApplicationContextName()} v${context.getApplicationContextVersion()}. ` +
         `Elapsed: ${this.initializationElapsedMs.toFixed(2)}ms.`,
       );
@@ -100,24 +109,21 @@ export class EjbJarDeploymentDescriptorEnterpriseApplicationBootstrapInitializer
   }
 
   private parseDeploymentDescriptors(): void {
+    const plan = this.deploymentDecorator?.getDeploymentPlan();
+    const descriptorNames = plan?.getRegisteredDescriptorNames() ?? [];
+    for (const name of descriptorNames) {
+      console.debug(
+        `[${this.getBootstrapInitializerName()}] Processing deployment descriptor: ${name} ` +
+        `[${plan?.getParsedDescriptor(name)?.tagName ?? "unknown"}]`,
+      );
+    }
     console.debug(
-      `[${this.getBootstrapInitializerName()}] Processing deployment descriptor: META-INF/ejb-jar.xml`,
-    );
-    console.debug(
-      `[${this.getBootstrapInitializerName()}] Processing deployment descriptor: META-INF/application.xml`,
-    );
-    console.debug(
-      `[${this.getBootstrapInitializerName()}] Processing CDI bean archive: META-INF/beans.xml`,
-    );
-    console.debug(
-      `[${this.getBootstrapInitializerName()}] Processing JPA persistence unit: META-INF/persistence.xml`,
-    );
-    console.debug(
-      `[${this.getBootstrapInitializerName()}] All deployment descriptors parsed successfully.`,
+      `[${this.getBootstrapInitializerName()}] Deployment descriptor parsing complete. ` +
+      `${descriptorNames.length} descriptor(s) processed.`,
     );
   }
 
   private countEjbBeanDefinitions(): number {
-    return 1;
+    return this.deploymentDecorator?.getEntityBeanRegistrationCount() ?? 1;
   }
 }

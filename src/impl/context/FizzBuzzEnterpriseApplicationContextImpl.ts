@@ -1,9 +1,11 @@
 import { AbstractBaseFizzBuzzEnterpriseApplicationContext } from "../../abstracts/AbstractBaseFizzBuzzEnterpriseApplicationContext.js";
 import type { IFizzBuzzEnterpriseApplicationContext } from "../../contracts/IFizzBuzzEnterpriseApplicationContext.js";
+import type { IEnterpriseDeploymentAwareBootstrapDecorator } from "../../contracts/IEnterpriseDeploymentAwareBootstrapDecorator.js";
 import { ApplicationContextInitializationException } from "../../exceptions/ApplicationContextInitializationException.js";
 import { FizzBuzzResolutionFacadeFactoryBeanFactory } from "../factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
 import { ServiceLocatorFactoryBeanFactory } from "../factories/ServiceLocatorFactoryBean.js";
 import { FizzBuzzEnterpriseServiceFactoryBeanFactory } from "../../enterprise/FizzBuzzEnterpriseService.js";
+import { DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory } from "../factories/DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.js";
 
 export class FizzBuzzEnterpriseApplicationContextImpl
   extends AbstractBaseFizzBuzzEnterpriseApplicationContext
@@ -32,13 +34,24 @@ export class FizzBuzzEnterpriseApplicationContextImpl
   override initialize(): void {
     this.assertNotInitialized();
     try {
+      const deploymentDecorator =
+        DeploymentDescriptorDrivenBootstrapDecoratorFactoryBeanFactory.getDecorator();
+
       console.debug(
         `[${this.getApplicationContextName()} v${this.getApplicationContextVersion()}] Initializing FizzBuzz Enterprise Application Context...`,
       );
       console.debug(
         `[${this.getApplicationContextName()}] Deployment descriptors: ${this.resolveDeploymentDescriptorPaths().join(", ")}`,
       );
+      if (deploymentDecorator !== null) {
+        console.debug(
+          `[${this.getApplicationContextName()}] Descriptor-driven bootstrap: ` +
+          `${deploymentDecorator.getEntityBeanRegistrationCount()} entity bean(s), ` +
+          `${deploymentDecorator.getRegisteredJndiBindingCount()} JNDI binding(s)`,
+        );
+      }
 
+      this.initializeDeploymentDescriptorPhase(deploymentDecorator);
       this.initializeServiceLocator();
       this.initializeEnterpriseService();
       this.initializeResolutionFacade();
@@ -92,7 +105,31 @@ export class FizzBuzzEnterpriseApplicationContextImpl
     this.initialize();
   }
 
-  private initializeServiceLocator(): void {
+  private   initializeDeploymentDescriptorPhase(
+    deploymentDecorator: IEnterpriseDeploymentAwareBootstrapDecorator | null,
+  ): void {
+    console.debug(
+      `[${this.getApplicationContextName()}] Phase 0/5: Bootstrap deployment descriptor configuration...`,
+    );
+    if (deploymentDecorator !== null) {
+      const plan = deploymentDecorator.getDeploymentPlan();
+      for (const descriptorName of plan.getRegisteredDescriptorNames()) {
+        this.registerComponent(
+          `DeploymentDescriptor:${descriptorName}`,
+          { descriptorName } as object,
+        );
+        console.debug(
+          `[${this.getApplicationContextName()}] Registered descriptor: ${descriptorName} (${plan.getParsedDescriptor(descriptorName)?.children.length ?? 0} child elements)`,
+        );
+      }
+      this.registerComponent(
+        "EnterpriseDeploymentPlan",
+        plan as unknown as object,
+      );
+    }
+  }
+
+  initializeServiceLocator(): void {
     console.debug(`[${this.getApplicationContextName()}] Phase 1/4: Initializing ServiceLocator...`);
     this.serviceLocatorFactoryBean = ServiceLocatorFactoryBeanFactory.createFactoryBean(
       "FizzBuzzEnterpriseApplicationContextServiceLocatorFactoryBean",
