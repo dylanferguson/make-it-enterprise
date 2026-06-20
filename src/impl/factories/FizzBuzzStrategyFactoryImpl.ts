@@ -1,6 +1,6 @@
 import { AbstractBaseFizzBuzzStrategyFactory } from "../../abstracts/AbstractBaseFizzBuzzStrategyFactory.js";
 import type { IFizzBuzzStrategy } from "../../contracts/IFizzBuzzStrategy.js";
-import type { IDivisibilityEvaluator } from "../../contracts/IDivisibilityEvaluator.js";
+import type { IFizzBuzzVisitor } from "../../contracts/IFizzBuzzVisitor.js";
 import type { IFizzBuzzOutputFormatter } from "../../contracts/IFizzBuzzOutputFormatter.js";
 import { FizzBuzzDivisibleByFifteenStrategy } from "../strategies/FizzBuzzDivisibleByFifteenStrategy.js";
 import { FizzBuzzDivisibleByThreeStrategy } from "../strategies/FizzBuzzDivisibleByThreeStrategy.js";
@@ -8,21 +8,21 @@ import { FizzBuzzDivisibleByFiveStrategy } from "../strategies/FizzBuzzDivisible
 import { FizzBuzzDefaultValueStrategy } from "../strategies/FizzBuzzDefaultValueStrategy.js";
 
 export class FizzBuzzStrategyFactoryImpl extends AbstractBaseFizzBuzzStrategyFactory {
-  private readonly evaluator: IDivisibilityEvaluator;
+  private readonly visitor: IFizzBuzzVisitor;
   private readonly formatter: IFizzBuzzOutputFormatter;
 
-  constructor(evaluator: IDivisibilityEvaluator, formatter: IFizzBuzzOutputFormatter) {
+  constructor(visitor: IFizzBuzzVisitor, formatter: IFizzBuzzOutputFormatter) {
     super();
-    this.evaluator = evaluator;
+    this.visitor = visitor;
     this.formatter = formatter;
   }
 
   override createStrategies(): readonly IFizzBuzzStrategy[] {
     const strategies: readonly IFizzBuzzStrategy[] = [
-      new FizzBuzzDivisibleByFifteenStrategy(this.evaluator, this.formatter),
-      new FizzBuzzDivisibleByThreeStrategy(this.evaluator, this.formatter),
-      new FizzBuzzDivisibleByFiveStrategy(this.evaluator, this.formatter),
-      new FizzBuzzDefaultValueStrategy(this.evaluator, this.formatter),
+      new FizzBuzzDivisibleByFifteenStrategy(this.visitor, this.formatter),
+      new FizzBuzzDivisibleByThreeStrategy(this.visitor, this.formatter),
+      new FizzBuzzDivisibleByFiveStrategy(this.visitor, this.formatter),
+      new FizzBuzzDefaultValueStrategy(this.visitor, this.formatter),
     ];
     return this.sortByPriority(strategies);
   }

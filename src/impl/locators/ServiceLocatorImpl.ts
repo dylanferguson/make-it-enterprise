@@ -4,59 +4,80 @@ import type { IFizzBuzzOutputFormatter } from "../../contracts/IFizzBuzzOutputFo
 import type { IFizzBuzzStrategyFactory } from "../../contracts/IFizzBuzzStrategyFactory.js";
 import type { ICompositeValueResolver } from "../../contracts/ICompositeValueResolver.js";
 import type { IRangeCalculator } from "../../contracts/IRangeCalculator.js";
+import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
+import type { IStrategyRegistry } from "../../contracts/IStrategyRegistry.js";
 import { ModuloDivisibilityEvaluatorImpl } from "../evaluators/ModuloDivisibilityEvaluatorImpl.js";
 import { FizzBuzzOutputFormatterImpl } from "../formatters/FizzBuzzOutputFormatterImpl.js";
 import { FizzBuzzStrategyFactoryImpl } from "../factories/FizzBuzzStrategyFactoryImpl.js";
 import { FizzBuzzHandlerChain } from "../handlers/FizzBuzzHandlerChain.js";
 import { CompositeValueResolverImpl } from "../resolvers/CompositeValueResolverImpl.js";
 import { FizzBuzzRangeCalculatorImpl } from "../calculators/FizzBuzzRangeCalculatorImpl.js";
+import { ModuloArithmeticStrategyProviderImpl } from "../providers/ModuloArithmeticStrategyProviderImpl.js";
+import { DivisibilityCheckVisitor } from "../visitors/DivisibilityCheckVisitor.js";
+import { StrategyRegistryImpl } from "../registry/StrategyRegistryImpl.js";
+import { FizzBuzzConfigurationContext } from "../configuration/FizzBuzzConfigurationContext.js";
+import { ValueResolverDecoratorChainBuilder } from "../builders/ValueResolverDecoratorChainBuilder.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
-  private divisibilityEvaluator: IDivisibilityEvaluator | null = null;
-  private outputFormatter: IFizzBuzzOutputFormatter | null = null;
-  private strategyFactory: IFizzBuzzStrategyFactory | null = null;
-  private valueResolver: ICompositeValueResolver | null = null;
-  private rangeCalculator: IRangeCalculator | null = null;
+  private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
 
   override initialize(): void {
-    this.divisibilityEvaluator = new ModuloDivisibilityEvaluatorImpl();
-    this.outputFormatter = new FizzBuzzOutputFormatterImpl();
-    this.strategyFactory = new FizzBuzzStrategyFactoryImpl(
-      this.divisibilityEvaluator,
-      this.outputFormatter,
-    );
+    const strategyProvider: IModuloArithmeticStrategyProvider = new ModuloArithmeticStrategyProviderImpl();
+    const registry: IStrategyRegistry = new StrategyRegistryImpl();
+    const visitor = new DivisibilityCheckVisitor(strategyProvider);
+    const outputFormatter: IFizzBuzzOutputFormatter = new FizzBuzzOutputFormatterImpl();
+    const evaluator: IDivisibilityEvaluator = new ModuloDivisibilityEvaluatorImpl(strategyProvider);
+    const strategyFactory: IFizzBuzzStrategyFactory = new FizzBuzzStrategyFactoryImpl(visitor, outputFormatter);
 
-    const handlerChain = new FizzBuzzHandlerChain(
-      this.strategyFactory,
-      this.outputFormatter,
-    );
+    const handlerChain = new FizzBuzzHandlerChain(strategyFactory, outputFormatter);
+    const baseResolver = new CompositeValueResolverImpl(handlerChain.getHead());
 
-    this.valueResolver = new CompositeValueResolverImpl(handlerChain.getHead());
-    this.rangeCalculator = new FizzBuzzRangeCalculatorImpl(this.valueResolver);
+    const resolverDecoratorChain = new ValueResolverDecoratorChainBuilder();
+    const valueResolver: ICompositeValueResolver = resolverDecoratorChain
+      .withCaching(true)
+      .withLogging(false)
+      .withValidation(true)
+      .withMetrics(true)
+      .build(baseResolver);
+
+    const rangeCalculator: IRangeCalculator = new FizzBuzzRangeCalculatorImpl(valueResolver);
+
+    const configBuilder = new FizzBuzzConfigurationContext();
+    this.configurationContext = configBuilder
+      .withDivisibilityEvaluator(evaluator)
+      .withOutputFormatter(outputFormatter)
+      .withStrategyFactory(strategyFactory)
+      .withValueResolver(valueResolver)
+      .withRangeCalculator(rangeCalculator)
+      .withModuloArithmeticStrategyProvider(strategyProvider)
+      .withStrategyRegistry(registry)
+      .withApplicationVersion("2.0.0-ENTERPRISE")
+      .withApplicationName("FizzBuzzEnterpriseEdition")
+      .build();
   }
 
   override getDivisibilityEvaluator(): IDivisibilityEvaluator {
     this.ensureInitialized();
-    return this.divisibilityEvaluator!;
+    return this.configurationContext!.getDivisibilityEvaluator();
   }
 
   override getOutputFormatter(): IFizzBuzzOutputFormatter {
     this.ensureInitialized();
-    return this.outputFormatter!;
+    return this.configurationContext!.getOutputFormatter();
   }
 
   override getStrategyFactory(): IFizzBuzzStrategyFactory {
     this.ensureInitialized();
-    return this.strategyFactory!;
+    return this.configurationContext!.getStrategyFactory();
   }
 
   override getValueResolver(): ICompositeValueResolver {
     this.ensureInitialized();
-    return this.valueResolver!;
+    return this.configurationContext!.getValueResolver();
   }
 
   override getRangeCalculator(): IRangeCalculator {
     this.ensureInitialized();
-    return this.rangeCalculator!;
+    return this.configurationContext!.getRangeCalculator();
   }
 }

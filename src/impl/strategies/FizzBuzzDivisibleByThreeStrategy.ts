@@ -1,10 +1,10 @@
 import { AbstractBaseFizzBuzzStrategy } from "../../abstracts/AbstractBaseFizzBuzzStrategy.js";
-import type { IDivisibilityEvaluator } from "../../contracts/IDivisibilityEvaluator.js";
+import type { IFizzBuzzVisitor } from "../../contracts/IFizzBuzzVisitor.js";
 import type { IFizzBuzzOutputFormatter } from "../../contracts/IFizzBuzzOutputFormatter.js";
 
 export class FizzBuzzDivisibleByThreeStrategy extends AbstractBaseFizzBuzzStrategy {
-  constructor(evaluator: IDivisibilityEvaluator, formatter: IFizzBuzzOutputFormatter) {
-    super(evaluator, formatter);
+  constructor(visitor: IFizzBuzzVisitor, formatter: IFizzBuzzOutputFormatter) {
+    super(visitor, formatter);
   }
 
   override getPriority(): number {
