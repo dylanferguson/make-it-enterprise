@@ -68,7 +68,7 @@ ENTERPRISE_DELAY_SECONDS=30 pnpm sandbox:loop
 # Inspect the sandbox workspace.
 pnpm sandbox:shell
 
-# Export the result, with its full Git history, to fizzbuzz-enterprise/.
+# Export the current result snapshot to fizzbuzz-enterprise/.
 pnpm sandbox:export
 
 # Verify the sandbox and OpenCode TUI startup.
