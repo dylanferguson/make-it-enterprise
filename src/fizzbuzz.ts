@@ -101,6 +101,8 @@ import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from ".
 import { EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.js";
 import { EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory.js";
 import { DivisibilityExpressionFactoryBeanFactory } from "./expressionengine/factories/DivisibilityExpressionFactoryBeanFactory.js";
+import { CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory } from "./cache/factories/CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory.js";
+import { EnterpriseComputationCacheManagerFactoryBeanFactory } from "./cache/factories/EnterpriseComputationCacheManagerFactoryBeanFactory.js";
 import { AopInfrastructureFactoryBeanFactory as AopInfrastructureBeanFactory } from "./aop/factories/AopInfrastructureFactoryBeanFactory.js";
 import { AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory } from "./aop/factories/AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory.js";
 import { ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory } from "./execution/factories/ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.js";
@@ -364,6 +366,20 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `evaluators=[${expressionRegistry.getRegisteredEvaluatorNames().join(", ")}], ` +
       `evaluatorCount=[${expressionRegistry.getEvaluatorCount()}]`,
     );
+  }
+  {
+    const cacheDecorator = CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory.getCachedEvaluator();
+    const cacheManager = EnterpriseComputationCacheManagerFactoryBeanFactory.getCacheManager();
+    if (cacheDecorator !== null && cacheManager !== null) {
+      console.debug(
+        `[EnterpriseComputationCacheInfrastructure] Enterprise computation cache infrastructure initialized: ` +
+        `decorator=[${cacheDecorator.getDecoratorName()} v${cacheDecorator.getDecoratorVersion()}], ` +
+        `delegate=[${cacheDecorator.getDelegatingEvaluatorName()}], ` +
+        `cacheHitCount=[${cacheDecorator.getCacheHitCount()}], ` +
+        `evaluationCount=[${cacheDecorator.getEvaluationCount()}], ` +
+        `manager=[${cacheManager.getCacheManagerDescriptor()}]`,
+      );
+    }
   }
   {
     const writer = FizzBuzzResultItemWriterFactoryBeanFactory.createWriter();

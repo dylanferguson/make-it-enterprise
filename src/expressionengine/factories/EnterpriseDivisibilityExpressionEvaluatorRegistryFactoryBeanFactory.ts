@@ -1,6 +1,6 @@
 import type { IEnterpriseDivisibilityExpressionEvaluatorRegistry } from "../contracts/index.js";
 import { DefaultEnterpriseDivisibilityExpressionEvaluatorRegistryImpl } from "../impl/registry/DefaultEnterpriseDivisibilityExpressionEvaluatorRegistryImpl.js";
-import { ModuloOperatorDivisibilityExpressionEvaluatorImpl } from "../impl/evaluators/ModuloOperatorDivisibilityExpressionEvaluatorImpl.js";
+import { CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory } from "../../cache/factories/CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory.js";
 
 export class EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory {
   private static readonly FACTORY_BEAN_NAME = "EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory";
@@ -13,13 +13,15 @@ export class EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory
     if (EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton === null) {
       EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton =
         new DefaultEnterpriseDivisibilityExpressionEvaluatorRegistryImpl();
-      const moduloEvaluator = new ModuloOperatorDivisibilityExpressionEvaluatorImpl();
-      EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton.registerEvaluator(moduloEvaluator);
+      const cacheAwareEvaluator = CacheAwareExpressionEvaluatorDecoratorFactoryBeanFactory.createCachedEvaluator();
+      EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton.registerEvaluator(cacheAwareEvaluator);
       EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.initializerCount++;
       const reg = EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton!;
       console.debug(
         `[${EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.FACTORY_BEAN_NAME} v${EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.FACTORY_BEAN_VERSION}] ` +
-        `Registry initialized with ${reg.getEvaluatorCount()} evaluator(s)`,
+        `Registry initialized with ${reg.getEvaluatorCount()} evaluator(s): ` +
+        `decoratedEvaluator=[${cacheAwareEvaluator.getDecoratorName()} v${cacheAwareEvaluator.getDecoratorVersion()}], ` +
+        `delegate=[${cacheAwareEvaluator.getDelegatingEvaluatorName()}]`,
       );
     }
     return EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.registrySingleton!;
