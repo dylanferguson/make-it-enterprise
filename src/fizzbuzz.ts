@@ -61,6 +61,17 @@ import type { ILocalizedMessageResolver } from "./localization/contracts/ILocali
 import { DefaultLocaleResolutionStrategyImpl } from "./localization/impl/locales/DefaultLocaleResolutionStrategyImpl.js";
 import type { IEnterpriseFizzBuzzPublicApiResolutionDelegate } from "./contracts/IEnterpriseFizzBuzzPublicApiResolutionDelegate.js";
 import { EnterpriseFizzBuzzPublicApiResolutionDelegateFactoryBeanFactory } from "./impl/publicapi/factories/EnterpriseFizzBuzzPublicApiResolutionDelegateFactoryBeanFactory.js";
+import type { IFizzBuzzEnterpriseBusinessDelegate } from "./contracts/IFizzBuzzEnterpriseBusinessDelegate.js";
+import type { IFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContext } from "./contracts/IFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContext.js";
+import { FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory } from "./impl/businessdelegates/factories/FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory.js";
+import { DefaultFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContextImpl } from "./impl/businessdelegates/DefaultFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContextImpl.js";
+import { FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory } from "./impl/chains/resolution/factories/FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.js";
+import type { IFizzBuzzResolutionStrategyChainOfResponsibilityManager } from "./contracts/IFizzBuzzResolutionStrategyChainOfResponsibilityManager.js";
+import type { IEnterpriseFizzBuzzResolutionStrategySelectorVisitor } from "./contracts/IEnterpriseFizzBuzzResolutionStrategySelectorVisitor.js";
+import { ServiceLocatorManagedBusinessDelegateProxyFactoryBeanFactory } from "./impl/proxies/factories/ServiceLocatorManagedBusinessDelegateProxyFactoryBeanFactory.js";
+import type { IServiceLocatorManagedBusinessDelegateProxy } from "./contracts/IServiceLocatorManagedBusinessDelegateProxy.js";
+import { ServiceLocatorFactoryBeanFactory } from "./impl/factories/ServiceLocatorFactoryBean.js";
+import type { IServiceLocator } from "./contracts/IServiceLocator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -253,6 +264,94 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   return true;
 })();
 
+let enterpriseBusinessDelegate: IFizzBuzzEnterpriseBusinessDelegate | null = null;
+let enterpriseBusinessDelegateServiceLocatorAwareContext: IFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContext | null = null;
+let businessDelegateServiceLocatorProxy: IServiceLocatorManagedBusinessDelegateProxy | null = null;
+let enterpriseResolutionStrategyChainOfResponsibilityManager: IFizzBuzzResolutionStrategyChainOfResponsibilityManager | null = null;
+let enterpriseResolutionStrategySelectorVisitor: IEnterpriseFizzBuzzResolutionStrategySelectorVisitor | null = null;
+let enterpriseBusinessDelegateInfrastructureInitialized = false;
+
+function initializeEnterpriseBusinessDelegateInfrastructure(): void {
+  if (enterpriseBusinessDelegateInfrastructureInitialized) return;
+
+  const serviceLocator: IServiceLocator = ServiceLocatorFactoryBeanFactory.createFactoryBean().createServiceLocator();
+  const publicApiDelegate = resolvePublicApiDelegate();
+
+  enterpriseResolutionStrategySelectorVisitor =
+    FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.getStrategySelectorVisitor();
+
+  const passThroughChainDelegate = (_value: number, innerResolver: (value: number) => string): string => {
+    return innerResolver(_value);
+  };
+
+  const moduloThreeChainDelegate = passThroughChainDelegate;
+  const moduloFiveChainDelegate = passThroughChainDelegate;
+  const moduloFifteenChainDelegate = passThroughChainDelegate;
+
+  enterpriseResolutionStrategyChainOfResponsibilityManager =
+    FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.createChainManager(
+      moduloThreeChainDelegate,
+      moduloFiveChainDelegate,
+      moduloFifteenChainDelegate,
+      enterpriseResolutionStrategySelectorVisitor ?? undefined,
+    );
+
+  const baseFacade = resolveResolutionFacade();
+  const validationAwareDecorator =
+    ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      baseFacade,
+      "ENABLED_STRICT",
+    );
+  const interceptionFilterChainDecorator =
+    InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      validationAwareDecorator,
+      InterceptionFilterChainDecoratorConfigurationProfile.ENABLED_STANDARD,
+    );
+  const configurationProvider = EnterpriseModuloArithmeticConfigurationProviderFactoryBeanFactory.createConfigurationProvider();
+  const configurationAwareDecorator = new DefaultConfigurationAwareResolutionFacadeDecoratorImpl(
+    interceptionFilterChainDecorator,
+    configurationProvider,
+  );
+
+  enterpriseBusinessDelegateServiceLocatorAwareContext =
+    new DefaultFizzBuzzEnterpriseBusinessDelegateServiceLocatorAwareContextImpl(
+      serviceLocator,
+      publicApiDelegate,
+      resolveMediationOrchestrator(),
+      resolveGovernanceEnforcementFacade(),
+      baseFacade,
+      validationAwareDecorator,
+      interceptionFilterChainDecorator,
+      configurationAwareDecorator,
+      configurationProvider,
+      serviceLocator.getValueResolver(),
+      enterpriseResolutionStrategyChainOfResponsibilityManager,
+    );
+
+  FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory.setServiceLocatorAwareContext(
+    enterpriseBusinessDelegateServiceLocatorAwareContext,
+  );
+  enterpriseBusinessDelegate =
+    FizzBuzzEnterpriseBusinessDelegateFactoryBeanFactory.createBusinessDelegate();
+
+  businessDelegateServiceLocatorProxy =
+    ServiceLocatorManagedBusinessDelegateProxyFactoryBeanFactory.createProxy(
+      publicApiDelegate,
+      serviceLocator,
+    );
+
+  console.debug(
+    `[EnterpriseBusinessDelegateInfrastructure] Business delegate infrastructure initialized: ` +
+    `delegate=[${enterpriseBusinessDelegate.getDelegateName()} v${enterpriseBusinessDelegate.getDelegateVersion()}], ` +
+    `chainOfResponsibility=[${enterpriseResolutionStrategyChainOfResponsibilityManager.getChainName()} v${enterpriseResolutionStrategyChainOfResponsibilityManager.getChainVersion()}], ` +
+    `handlers=[${enterpriseResolutionStrategyChainOfResponsibilityManager.getRegisteredHandlerNames().join(", ")}], ` +
+    `proxy=[${businessDelegateServiceLocatorProxy.getProxyName()} v${businessDelegateServiceLocatorProxy.getProxyVersion()}], ` +
+    `visitor=[${enterpriseResolutionStrategySelectorVisitor?.getVisitorName() ?? "N/A"} v${enterpriseResolutionStrategySelectorVisitor?.getVisitorVersion() ?? "N/A"}]`,
+  );
+
+  enterpriseBusinessDelegateInfrastructureInitialized = true;
+}
+
 let governanceEnforcementFacade: IEnterpriseComputationGovernancePolicyEnforcementFacade | null = null;
 let mediationOrchestrator: IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator | null = null;
 let builderPipelineProduct: IFizzBuzzComputationPipelineProduct | null = null;
@@ -397,12 +496,26 @@ function resolvePublicApiDelegate(): IEnterpriseFizzBuzzPublicApiResolutionDeleg
   return publicApiDelegate!;
 }
 
+function resolveEnterpriseBusinessDelegate(): IFizzBuzzEnterpriseBusinessDelegate {
+  if (!enterpriseBusinessDelegateInfrastructureInitialized) {
+    initializeEnterpriseBusinessDelegateInfrastructure();
+  }
+  return enterpriseBusinessDelegate!;
+}
+
+function resolveBusinessDelegateServiceLocatorProxy(): IServiceLocatorManagedBusinessDelegateProxy {
+  if (!enterpriseBusinessDelegateInfrastructureInitialized) {
+    initializeEnterpriseBusinessDelegateInfrastructure();
+  }
+  return businessDelegateServiceLocatorProxy!;
+}
+
 export function fizzBuzzValue(value: number): string {
-  const delegate = resolvePublicApiDelegate();
-  return delegate.resolveSingleValue(value);
+  const delegate = resolveEnterpriseBusinessDelegate();
+  return delegate.delegateSingleValueResolution(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const delegate = resolvePublicApiDelegate();
-  return delegate.resolveRange(start, end);
+  const delegate = resolveEnterpriseBusinessDelegate();
+  return delegate.delegateRangeResolution(start, end);
 }
