@@ -31,6 +31,11 @@ import {
   InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory,
   InterceptionFilterChainDecoratorConfigurationProfile,
 } from "./impl/factories/InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory.js";
+import {
+  EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory,
+  EnterpriseComputationGovernanceFacadeConfigurationProfile,
+} from "./impl/governance/EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.js";
+import type { IEnterpriseComputationGovernancePolicyEnforcementFacade } from "./contracts/IEnterpriseComputationGovernancePolicyEnforcementFacade.js";
 
 let messagePropertyConfigurationInitialized = false;
 
@@ -95,8 +100,32 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `esbBinding=[${busBinding.getBindingName()} v${busBinding.getBindingVersion()}]`,
     );
   }
+  if (!EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.getCurrentFacade()) {
+    const governanceFacade = EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.createGovernanceEnforcementFacade(
+      EnterpriseComputationGovernanceFacadeConfigurationProfile.STANDARD,
+    );
+    console.debug(
+      `[BootstrapGate] Enterprise computation governance enforcement facade initialized: ` +
+      `facade=[${governanceFacade.getFacadeName()} v${governanceFacade.getFacadeVersion()}], ` +
+      `gate=[${governanceFacade.getEnforcementGate().getGateName()} v${governanceFacade.getEnforcementGate().getGateVersion()}], ` +
+      `registry=[${governanceFacade.getPolicyRegistry().getRegistryName()} v${governanceFacade.getPolicyRegistry().getRegistryVersion()}], ` +
+      `visitor=[${governanceFacade.getValidationVisitor().getVisitorName()} v${governanceFacade.getValidationVisitor().getVisitorVersion()}]`,
+    );
+  }
   return true;
 })();
+
+let governanceEnforcementFacade: IEnterpriseComputationGovernancePolicyEnforcementFacade | null = null;
+
+function resolveGovernanceEnforcementFacade(): IEnterpriseComputationGovernancePolicyEnforcementFacade {
+  if (governanceEnforcementFacade === null) {
+    governanceEnforcementFacade =
+      EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.createGovernanceEnforcementFacade(
+        EnterpriseComputationGovernanceFacadeConfigurationProfile.STANDARD,
+      );
+  }
+  return governanceEnforcementFacade!;
+}
 
 function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   let baseFacade: IFizzBuzzSingleValueResolutionFacade;
@@ -130,11 +159,20 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
 }
 
 export function fizzBuzzValue(value: number): string {
+  const governanceFacade = resolveGovernanceEnforcementFacade();
   const facade = resolveResolutionFacade();
-  return facade.resolveValue(value);
+  return governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
+  const governanceFacade = resolveGovernanceEnforcementFacade();
   const facade = resolveResolutionFacade();
-  return facade.resolveRange(start, end);
+  const results: string[] = [];
+  for (let i = start; i <= end; i++) {
+    const idx = i;
+    results.push(
+      governanceFacade.enforceComputation(idx, (v: number) => facade.resolveValue(v)),
+    );
+  }
+  return results;
 }
