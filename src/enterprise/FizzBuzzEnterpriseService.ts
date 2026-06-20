@@ -9,6 +9,8 @@ import { FallbackValueResolverDecorator } from "../patterns/FallbackValueResolve
 import { SessionManagedResolverProxy } from "../impl/proxies/SessionManagedResolverProxy.js";
 import type { ICompositeValueResolver } from "../contracts/ICompositeValueResolver.js";
 import type { IComputationEventNotificationBus } from "../contracts/IComputationEventNotificationBus.js";
+import type { IFizzBuzzComputationBridge } from "../contracts/IFizzBuzzComputationBridge.js";
+import type { IFizzBuzzComputationMediator } from "../contracts/IFizzBuzzComputationMediator.js";
 import { XmlDeploymentDescriptorReaderImpl } from "../impl/descriptors/XmlDeploymentDescriptorReaderImpl.js";
 import { DefaultStrategySelectorFactoryImpl } from "../impl/factories/DefaultStrategySelectorFactoryImpl.js";
 import { FizzBuzzTransactionManagerImpl } from "../impl/transactions/FizzBuzzTransactionManagerImpl.js";
@@ -17,6 +19,9 @@ import { ModuloArithmeticStrategyProviderImpl } from "../impl/providers/ModuloAr
 import { ComputationEventNotificationBusFactoryBeanFactory } from "../impl/factories/ComputationEventNotificationBusFactoryBean.js";
 import { ValueResolvedComputationEventImpl } from "../impl/events/ValueResolvedComputationEventImpl.js";
 import { RangeComputationCompletedEventImpl } from "../impl/events/RangeComputationCompletedEventImpl.js";
+import { FizzBuzzComputationBridgeFactoryBeanFactory, FizzBuzzComputationBridgeType } from "../impl/factories/FizzBuzzComputationBridgeFactoryBean.js";
+import { FizzBuzzComputationMediatorFactoryBeanFactory } from "../impl/factories/FizzBuzzComputationMediatorFactoryBean.js";
+import { FizzBuzzStrategyFlyweightFactoryBean } from "../impl/factories/FizzBuzzStrategyFlyweightFactoryBean.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -105,8 +110,29 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 
       const managedBean = serviceHome.create();
 
-      FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
+      const rangeCalculator = serviceLocator.getRangeCalculator();
+
+      const flyweightFactory = FizzBuzzStrategyFlyweightFactoryBean.createFlyweightFactory();
+
+      const bridgeFactoryBean = FizzBuzzComputationBridgeFactoryBeanFactory.createFactoryBean(
+        FizzBuzzComputationBridgeType.MODULO_DELEGATING,
         managedBean.getValueResolver(),
+        rangeCalculator,
+      );
+      bridgeFactoryBean.setStrategyFlyweightFactory(flyweightFactory);
+      const bridge: IFizzBuzzComputationBridge = bridgeFactoryBean.createBridge();
+
+      const mediatorFactoryBean = FizzBuzzComputationMediatorFactoryBeanFactory.createFactoryBean(
+        bridge,
+        eventBus,
+        enterpriseContext.getSessionManager(),
+        transactionManager,
+        sloCollector,
+      );
+      const mediator: IFizzBuzzComputationMediator = mediatorFactoryBean.createMediator();
+
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
+        mediator,
         eventBus,
         serviceHome,
         transactionManager,
@@ -124,7 +150,7 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 }
 
 export class FizzBuzzEnterpriseService {
-  private readonly valueResolver: ICompositeValueResolver;
+  private readonly mediator: IFizzBuzzComputationMediator;
   private readonly eventBus: IComputationEventNotificationBus;
   private readonly serviceHome: object | null;
   private readonly transactionManager: object | null;
@@ -133,7 +159,7 @@ export class FizzBuzzEnterpriseService {
   private readonly strategySelector: object | null;
 
   constructor(
-    valueResolver: ICompositeValueResolver,
+    mediator: IFizzBuzzComputationMediator,
     eventBus: IComputationEventNotificationBus,
     serviceHome: object | null = null,
     transactionManager: object | null = null,
@@ -141,7 +167,7 @@ export class FizzBuzzEnterpriseService {
     selectorFactory: object | null = null,
     strategySelector: object | null = null,
   ) {
-    this.valueResolver = valueResolver;
+    this.mediator = mediator;
     this.eventBus = eventBus;
     this.serviceHome = serviceHome;
     this.transactionManager = transactionManager;
@@ -154,9 +180,13 @@ export class FizzBuzzEnterpriseService {
     return this.eventBus;
   }
 
+  getMediator(): IFizzBuzzComputationMediator {
+    return this.mediator;
+  }
+
   resolveValue(value: number): string {
     const startTime = performance.now();
-    const result = this.valueResolver.resolve(value);
+    const result = this.mediator.mediateValueResolution(value);
     const durationMs = performance.now() - startTime;
     const event = new ValueResolvedComputationEventImpl(
       "FizzBuzzEnterpriseService",
@@ -170,8 +200,7 @@ export class FizzBuzzEnterpriseService {
 
   calculateRange(start: number, end: number): readonly string[] {
     const rangeStartTime = performance.now();
-    const length = end - start + 1;
-    const results = Array.from({ length }, (_, index) => this.resolveValue(start + index));
+    const results = this.mediator.mediateRangeCalculation(start, end);
     const totalDurationMs = performance.now() - rangeStartTime;
     const rangeEvent = new RangeComputationCompletedEventImpl(
       "FizzBuzzEnterpriseService",
