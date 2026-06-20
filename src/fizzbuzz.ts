@@ -194,6 +194,10 @@ import type { IEnterpriseDivisibilityOrchestrationStrategyResolver } from "./ent
 import { FizzBuzzInvocationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzInvocationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import { FizzBuzzResolutionInvocationHandlerFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzResolutionInvocationHandlerFactoryBeanFactory.js";
 import { FizzBuzzResolutionProxyFactoryFactoryBeanFactory } from "./proxyinvocation/factories/FizzBuzzResolutionProxyFactoryFactoryBeanFactory.js";
+import { FizzBuzzComputationCommandFactoryBeanFactory } from "./computationcommand/factories/FizzBuzzComputationCommandFactoryBeanFactory.js";
+import type { IFizzBuzzComputationCommandInvoker } from "./computationcommand/contracts/IFizzBuzzComputationCommandInvoker.js";
+import { EnterpriseFizzBuzzPublicApiSessionFacadeFactoryBeanFactory } from "./enterprisefacade/factories/EnterpriseFizzBuzzPublicApiSessionFacadeFactoryBeanFactory.js";
+import type { IEnterpriseFizzBuzzPublicApiSessionFacade } from "./enterprisefacade/contracts/IEnterpriseFizzBuzzPublicApiSessionFacade.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -1603,6 +1607,33 @@ function resolvePipelineManagerViaResolutionStrategy(): IFizzBuzzPipelineManager
   return resolutionStrategy.resolvePipelineManager();
 }
 
+let commandInvoker: IFizzBuzzComputationCommandInvoker | null = null;
+let publicApiSessionFacade: IEnterpriseFizzBuzzPublicApiSessionFacade | null = null;
+
+function resolveCommandInvoker(): IFizzBuzzComputationCommandInvoker {
+  if (commandInvoker === null) {
+    commandInvoker = FizzBuzzComputationCommandFactoryBeanFactory.createInvoker();
+    console.debug(
+      `[CommandInfrastructure] Enterprise command invoker initialized: ` +
+      `invoker=[${commandInvoker.getInvokerName()} v${commandInvoker.getInvokerVersion()}], ` +
+      `auditEnabled=[${commandInvoker.isInvocationAuditEnabled()}], ` +
+      `commandTypes=[${commandInvoker.getRegisteredCommandTypeNames().join(", ")}]`,
+    );
+  }
+  return commandInvoker;
+}
+
+function resolvePublicApiSessionFacade(): IEnterpriseFizzBuzzPublicApiSessionFacade {
+  if (publicApiSessionFacade === null) {
+    const activator = resolveEndpointServiceActivator();
+    publicApiSessionFacade = EnterpriseFizzBuzzPublicApiSessionFacadeFactoryBeanFactory.createSessionFacade(
+      (v: number) => activator.activateSingleValueResolution(v),
+      (s: number, e: number) => activator.activateRangeResolution(s, e),
+    );
+  }
+  return publicApiSessionFacade;
+}
+
 let endpointServiceActivator: FizzBuzzEndpointAwareServiceActivatorImpl | null = null;
 
 function resolveEndpointServiceActivator(): FizzBuzzEndpointAwareServiceActivatorImpl {
@@ -1628,11 +1659,15 @@ function resolveEndpointServiceActivator(): FizzBuzzEndpointAwareServiceActivato
 }
 
 export function fizzBuzzValue(value: number): string {
-  const activator = resolveEndpointServiceActivator();
-  return activator.activateSingleValueResolution(value);
+  const invoker = resolveCommandInvoker();
+  const facade = resolvePublicApiSessionFacade();
+  const command = FizzBuzzComputationCommandFactoryBeanFactory.createValueCommand(value, facade);
+  return invoker.invokeValue(command);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const activator = resolveEndpointServiceActivator();
-  return activator.activateRangeResolution(start, end);
+  const invoker = resolveCommandInvoker();
+  const facade = resolvePublicApiSessionFacade();
+  const command = FizzBuzzComputationCommandFactoryBeanFactory.createRangeCommand(start, end, facade);
+  return invoker.invokeRange(command);
 }
