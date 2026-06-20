@@ -159,6 +159,10 @@ import { EnterpriseStrategyLookupServiceFactoryBeanFactory } from "./strategyloo
 import { EnterpriseStrategyLookupServiceManagedAdapterFactoryFactoryBeanFactory } from "./strategylookupservice/factories/EnterpriseStrategyLookupServiceManagedAdapterFactoryFactoryBeanFactory.js";
 import { EnterpriseStrategyLookupServiceAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./strategylookupservice/factories/EnterpriseStrategyLookupServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IEnterpriseStrategyLookupService } from "./strategylookupservice/contracts/IEnterpriseStrategyLookupService.js";
+import { EnterpriseConfigurationDescriptorParserFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseConfigurationDescriptorParserFactoryBeanFactory.js";
+import { EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory.js";
+import { EnterpriseOrchestrationMediationServiceFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseOrchestrationMediationServiceFactoryBeanFactory.js";
+import { EnterpriseOrchestrationMediationServiceAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseOrchestrationMediationServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -685,6 +689,32 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory.isRegistryInitialized()) {
+      let descriptor = EnterpriseConfigurationDescriptorParserFactoryBeanFactory.parseConfiguration();
+      const registry = EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory.createRegistry(
+        descriptor.isConfigurationValid() ? "DESCRIPTOR_DRIVEN" : "STANDARD",
+      );
+      if (descriptor.isConfigurationValid()) {
+        registry.reloadConfigurationFromDescriptor(descriptor);
+      }
+      const mediationService = EnterpriseOrchestrationMediationServiceFactoryBeanFactory.createMediationService(true);
+      console.debug(
+        `[EnterpriseConfigurationInfrastructure] Enterprise configuration descriptor-driven infrastructure initialized: ` +
+        `parser=[${EnterpriseConfigurationDescriptorParserFactoryBeanFactory.getFactoryBeanName()} v${EnterpriseConfigurationDescriptorParserFactoryBeanFactory.getFactoryBeanVersion()}], ` +
+        `descriptor=[${descriptor.getDescriptorName()} v${descriptor.getDescriptorVersion()}] from source=[${descriptor.getDescriptorSource()}], ` +
+        `valid=[${descriptor.isConfigurationValid()}], ` +
+        `properties=[${descriptor.getProperties().length}], ` +
+        `schemaVersion=[${descriptor.getSchemaVersion()}], ` +
+        `registry=[${registry.getRegistryName()} v${registry.getRegistryVersion()}], ` +
+        `decorators=[${registry.getRegisteredDecoratorCount()}], ` +
+        `profile=[${registry.getConfigurationProfileName()}], ` +
+        `mediation=[${mediationService.getServiceName()} v${mediationService.getServiceVersion()}], ` +
+        `mediationChain=[${mediationService.getActiveHandlerChainDescriptor()}], ` +
+        `mediationHandlers=[${mediationService.getRegisteredHandlerCount()}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -956,7 +986,9 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
     const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
     const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
-    return wrapWithStrategyLookupServiceResolution(postProcessed);
+    return wrapWithOrchestrationMediationResolution(
+      wrapWithStrategyLookupServiceResolution(postProcessed),
+    );
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -975,7 +1007,9 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
   const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
   const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
-  return wrapWithStrategyLookupServiceResolution(postProcessed);
+  return wrapWithOrchestrationMediationResolution(
+    wrapWithStrategyLookupServiceResolution(postProcessed),
+  );
 }
 
 function wrapWithAbstractDivisibilityStrategyResolution(
@@ -1105,6 +1139,28 @@ function wrapWithStrategyLookupServiceResolution(
       `decoratorEnabled=[${lookupServiceDecorator.isDecoratorEnabled()}]`,
     );
     return lookupServiceDecorator;
+  }
+  return facade;
+}
+
+function wrapWithOrchestrationMediationResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseOrchestrationMediationServiceFactoryBeanFactory.isServiceInitialized()) {
+    const mediationDecorator =
+      EnterpriseOrchestrationMediationServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        true,
+      );
+    console.debug(
+      `[OrchestrationMediationResolutionDecorator] Enterprise orchestration mediation resolution decorator applied: ` +
+      `decorator=[${mediationDecorator.getDecoratorName()} v${mediationDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${mediationDecorator.getWrappedFacade().getFacadeName()}], ` +
+      `mediationService=[${mediationDecorator.getMediationService().getServiceName()} v${mediationDecorator.getMediationService().getServiceVersion()}], ` +
+      `activeHandlerChain=[${mediationDecorator.getMediationService().getActiveHandlerChainDescriptor()}], ` +
+      `decoratorEnabled=[${mediationDecorator.isDecoratorEnabled()}]`,
+    );
+    return mediationDecorator;
   }
   return facade;
 }
