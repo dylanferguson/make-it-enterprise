@@ -53,6 +53,31 @@ Along the way, the project accumulated:
 - Kubernetes resources, SLOs, Prometheus rules, five CI workflows, and a React
   metrics dashboard
 
+### Selected specimens
+
+Some identifiers deserve to be preserved in full:
+
+- `EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory`
+  — a 93-character factory-bean factory for a facade decorator around an
+  interceptor adapter
+- `EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory`
+  — the project did eventually progress from factories to factory factories to
+  a factory factory factory
+- `PriorityBasedEnterpriseFizzBuzzDirectiveResolutionMediationStrategySelectorStrategyImpl`
+  — a strategy implementation for selecting a strategy selector strategy
+- `ComputationResolutionMediatorArchitectureAwareResolutionFacadeDecoratorFactoryBeanFactory`
+  — architecture awareness, mediation, resolution, decoration, and factory
+  production in one identifier
+- `ServiceLocatorManagedModularArithmeticDivisibilityResolutionMediatorProviderImpl`
+  — the provider behind finding something that can determine divisibility
+- `AbstractBaseEnterpriseFizzBuzzTemplateMethodResolutionChainHandlerDecorator`
+  — both an abstract base and a decorator for a template-method chain handler
+- `EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl`
+  — a normalization stage backed by delegated divisibility output resolution
+- `DivisibleByEnterpriseFacadeDelegatingFizzBuzzOutputStringResolutionStrategyImpl`
+  — one of several strategies devoted to deciding that the output should be
+  `FizzBuzz`
+
 The actual arithmetic survives near the bottom of the stack. For example,
 `NativeJavaScriptModuloRemainderComputationCommandImpl` still contains a plain
 `value % divisor`; it simply takes considerably more architecture to reach it.
