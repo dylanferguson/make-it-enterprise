@@ -78,6 +78,17 @@ import { ServiceLocatorManagedBusinessDelegateProxyFactoryBeanFactory } from "./
 import type { IServiceLocatorManagedBusinessDelegateProxy } from "./contracts/IServiceLocatorManagedBusinessDelegateProxy.js";
 import { ServiceLocatorFactoryBeanFactory } from "./impl/factories/ServiceLocatorFactoryBean.js";
 import type { IServiceLocator } from "./contracts/IServiceLocator.js";
+import { EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory } from "./document/impl/factories/EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory } from "./document/impl/factories/EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory } from "./document/impl/factories/EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentRegistryFactoryBeanFactory } from "./document/impl/factories/EnterpriseFizzBuzzDocumentRegistryFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./document/impl/factories/EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentRegistryImpl } from "./document/impl/EnterpriseFizzBuzzDocumentRegistryImpl.js";
+import { DocumentNodeType } from "./document/contracts/IEnterpriseFizzBuzzComputationResultDocument.js";
+import type { IDocumentAwareResolutionFacadeDecorator } from "./document/contracts/IDocumentAwareResolutionFacadeDecorator.js";
+import { FizzBuzzDocumentNodeImpl } from "./document/impl/FizzBuzzDocumentNodeImpl.js";
+import { NumberDocumentNodeImpl } from "./document/impl/NumberDocumentNodeImpl.js";
+import { UnresolvedDocumentNodeImpl } from "./document/impl/UnresolvedDocumentNodeImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -207,6 +218,32 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `orchestrator=[${mediationOrchestrator.getMediationOrchestratorName()} v${mediationOrchestrator.getMediationOrchestratorVersion()}], ` +
       `strategies=[${mediationOrchestrator.getRegisteredMediationStrategyNames().join(", ")}], ` +
       `activeStrategy=[${mediationOrchestrator.getActiveMediationStrategyName()}]`,
+    );
+  }
+  if (!EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.isFactoryInitialized()) {
+    const docBuilder = EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.createBuilder();
+    const docVisitor = EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.createVisitor();
+    const docRenderer = EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.createRenderer();
+    const docRegistry = EnterpriseFizzBuzzDocumentRegistryFactoryBeanFactory.createRegistry();
+    docRegistry.registerDocumentNodeType(
+      DocumentNodeType.FIZZBUZZ_COMPOSITE,
+      () => new FizzBuzzDocumentNodeImpl(0, ""),
+    );
+    docRegistry.registerDocumentNodeType(
+      DocumentNodeType.NUMBER,
+      () => new NumberDocumentNodeImpl(0, ""),
+    );
+    docRegistry.registerDocumentNodeType(
+      DocumentNodeType.UNRESOLVED,
+      () => new UnresolvedDocumentNodeImpl(0, ""),
+    );
+    console.debug(
+      `[DocumentInfrastructure] Enterprise computation result document model infrastructure initialized: ` +
+      `builder=[${docBuilder.getBuilderName()} v${docBuilder.getBuilderVersion()}], ` +
+      `visitor=[${docVisitor.getVisitorName()} v${docVisitor.getVisitorVersion()}], ` +
+      `renderer=[${docRenderer.getRendererName()} v${docRenderer.getRendererVersion()}], ` +
+      `registry=[${docRegistry.getRegistryName()} v${docRegistry.getRegistryVersion()}], ` +
+      `registeredNodeTypes=[${docRegistry.getRegisteredNodeTypes().join(", ")}]`,
     );
   }
   if (!EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.isInitialized()) {
@@ -489,7 +526,17 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     interceptionFilterChainDecorator,
     configurationProvider,
   );
-  return configurationAwareDecorator;
+  const documentBuilder = EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.createBuilder();
+  const documentVisitor = EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.createVisitor();
+  const documentRenderer = EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.createRenderer();
+  const documentAwareDecorator =
+    EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      configurationAwareDecorator,
+      documentBuilder,
+      documentVisitor,
+      documentRenderer,
+    );
+  return documentAwareDecorator;
 }
 
 let mdbCallbackRegistered = false;

@@ -11,6 +11,10 @@ import { InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory, Int
 import { DefaultConfigurationAwareResolutionFacadeDecoratorImpl } from "../decorators/DefaultConfigurationAwareResolutionFacadeDecoratorImpl.js";
 import { EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory, EnterpriseComputationGovernanceFacadeConfigurationProfile } from "../governance/EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.js";
 import { EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory, DirectiveResolutionMediationOrchestratorConfigurationProfile } from "../factories/EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory } from "../../document/impl/factories/EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory } from "../../document/impl/factories/EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory } from "../../document/impl/factories/EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory } from "../../document/impl/factories/EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 const DELEGATE_NAME = "InfrastructureManagedEnterpriseFizzBuzzPublicApiResolutionDelegate";
 const DELEGATE_VERSION = "1.0.0-PUBLIC-API-DELEGATE";
@@ -42,6 +46,16 @@ function buildInnerResolutionDelegate(): (value: number) => string {
     interceptionFilterChainDecorator,
     configurationProvider,
   );
+  const documentBuilder = EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.createBuilder();
+  const documentVisitor = EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.createVisitor();
+  const documentRenderer = EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.createRenderer();
+  const documentAwareDecorator =
+    EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      configurationAwareDecorator,
+      documentBuilder,
+      documentVisitor,
+      documentRenderer,
+    );
 
   const governanceFacade =
     EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.createGovernanceEnforcementFacade(
@@ -55,7 +69,7 @@ function buildInnerResolutionDelegate(): (value: number) => string {
   innerResolutionDelegateCache = (v: number) => {
     return orchestrator.orchestrateDirectiveResolution(v, (w: number) =>
       governanceFacade.enforceComputation(w, (x: number) =>
-        configurationAwareDecorator.resolveValue(x),
+        documentAwareDecorator.resolveValue(x),
       ),
     );
   };
