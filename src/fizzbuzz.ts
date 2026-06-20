@@ -135,6 +135,8 @@ import { ModuloEvaluationStrategyFactoryBeanFactory } from "./abstractdivisibili
 import { DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory.js";
 import { DivisibilityStrategyEvaluatorFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/DivisibilityStrategyEvaluatorFactoryBeanFactory.js";
 import { AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IFizzBuzzPipelineManager } from "./pipeline/contracts/IFizzBuzzPipelineManager.js";
+import { FizzBuzzPipelineManagerFactoryBeanFactory, FizzBuzzPipelineManagerConfigurationProfile } from "./pipeline/factories/FizzBuzzPipelineManagerFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -972,6 +974,32 @@ function resolveBusinessDelegateServiceLocatorProxy(): IServiceLocatorManagedBus
   return businessDelegateServiceLocatorProxy!;
 }
 
+let pipelineManager: IFizzBuzzPipelineManager | null = null;
+let pipelineManagerInitialized = false;
+
+function resolvePipelineManager(): IFizzBuzzPipelineManager {
+  if (!pipelineManagerInitialized) {
+    const delegationOrchestrator =
+      EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
+        .getOrCreateOrchestrator();
+    const delegate = resolveEnterpriseBusinessDelegate();
+    pipelineManager = FizzBuzzPipelineManagerFactoryBeanFactory.createPipelineManager(
+      delegationOrchestrator,
+      delegate,
+      FizzBuzzPipelineManagerConfigurationProfile.AUDIT_ENABLED,
+    );
+    pipelineManagerInitialized = true;
+    console.debug(
+      `[PipelineManagerInfrastructure] Enterprise pipeline manager infrastructure initialized: ` +
+      `manager=[${pipelineManager.getManagerName()} v${pipelineManager.getManagerVersion()}], ` +
+      `profile=[${pipelineManager.getActiveConfigurationProfile().getProfileName()}], ` +
+      `visitors=[${pipelineManager.getRegisteredPipelineVisitorNames().join(", ")}], ` +
+      `initialized=[${pipelineManager.isPipelineInitialized()}]`,
+    );
+  }
+  return pipelineManager!;
+}
+
 let batchChunkOrientedJob: IBatchChunkOrientedJob<number, string> | null = null;
 
 function resolveBatchChunkOrientedJob(
@@ -1000,25 +1028,11 @@ function resolveBatchChunkOrientedJob(
 }
 
 export function fizzBuzzValue(value: number): string {
-  const delegationOrchestrator =
-    EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
-      .getOrCreateOrchestrator();
-  return delegationOrchestrator.orchestrateDelegation(value, (v: number) => {
-    const delegate = resolveEnterpriseBusinessDelegate();
-    return delegate.delegateSingleValueResolution(v);
-  });
+  const manager = resolvePipelineManager();
+  return manager.executeSingleValuePipeline(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const delegationOrchestrator =
-    EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory
-      .getOrCreateOrchestrator();
-  return delegationOrchestrator.orchestrateRangeDelegation(
-    start,
-    end,
-    (s: number, e: number) => {
-      const batchJob = resolveBatchChunkOrientedJob(s, e);
-      return batchJob.execute();
-    },
-  );
+  const manager = resolvePipelineManager();
+  return manager.executeRangePipeline(start, end);
 }
