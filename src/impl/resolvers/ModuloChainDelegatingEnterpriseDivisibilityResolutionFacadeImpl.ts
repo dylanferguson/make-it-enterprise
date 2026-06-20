@@ -8,7 +8,7 @@ export class ModuloChainDelegatingEnterpriseDivisibilityResolutionFacadeImpl
   private static readonly FACADE_NAME = "ModuloChainDelegatingEnterpriseDivisibilityResolutionFacade";
   private static readonly FACADE_VERSION = "1.0.0-DIVISIBILITY-RESOLUTION-FACADE";
   private static readonly RESOLUTION_STRATEGY_DESCRIPTION =
-    "Delegates divisibility evaluation to the enterprise modulo chain of responsibility";
+    "Delegates divisibility evaluation to the enterprise modulo chain of responsibility with protocol stack integration";
 
   private readonly moduloChainHandler: IModuloOperationChainHandler;
 
@@ -44,6 +44,7 @@ export class ModuloChainDelegatingEnterpriseDivisibilityResolutionFacadeImpl
       .withValidation(true)
       .withCaching(true)
       .withAudit(true)
+      .withProtocolStack(true)
       .build();
   }
 }

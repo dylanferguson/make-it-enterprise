@@ -22,6 +22,7 @@ import { StandardEnterpriseFizzBuzzSlaMonitorImpl } from "./impl/slo/StandardEnt
 import { EnterpriseServiceBusChannelImpl } from "./impl/bus/EnterpriseServiceBusChannelImpl.js";
 import { StandardEnterpriseServiceBusMessageRouterImpl } from "./impl/bus/StandardEnterpriseServiceBusMessageRouterImpl.js";
 import { DefaultEnterpriseServiceBusChannelBindingImpl } from "./impl/bus/DefaultEnterpriseServiceBusChannelBindingImpl.js";
+import { EnterpriseRemainderComputationProtocolStackFactoryBeanFactory } from "./impl/protocol/EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.js";
 import { ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/ValidationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import { DivisibilityEvaluationSupervisionChainFactoryBean } from "./impl/factories/DivisibilityEvaluationSupervisionChainFactoryBean.js";
 import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/validation/DivisibilityValidationEnforcementGateFactoryBeanFactory.js";
@@ -158,6 +159,18 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `orchestrator=[${mediationOrchestrator.getMediationOrchestratorName()} v${mediationOrchestrator.getMediationOrchestratorVersion()}], ` +
       `strategies=[${mediationOrchestrator.getRegisteredMediationStrategyNames().join(", ")}], ` +
       `activeStrategy=[${mediationOrchestrator.getActiveMediationStrategyName()}]`,
+    );
+  }
+  if (!EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.isInitialized()) {
+    EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.initializeFactoryBean();
+    const stackFactory = EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.getOrCreateStackFactory();
+    const protocolStack = EnterpriseRemainderComputationProtocolStackFactoryBeanFactory.getOrCreateDefaultProtocolStack();
+    console.debug(
+      `[BootstrapGate] Enterprise remainder computation protocol stack initialized: ` +
+      `factory=[${stackFactory.getFactoryName()} v${stackFactory.getFactoryVersion()}], ` +
+      `stack=[${protocolStack.getStackName()} v${protocolStack.getStackVersion()}], ` +
+      `layers=[${protocolStack.getRegisteredLayerCount()}], ` +
+      `layerIds=[${protocolStack.getRegisteredLayers().map((l) => `L${l.getLayerNumber()}:${l.getLayerIdentifier()}`).join(", ")}]`,
     );
   }
   return true;

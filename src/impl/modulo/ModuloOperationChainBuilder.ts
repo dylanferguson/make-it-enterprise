@@ -1,8 +1,10 @@
 import type { IModuloOperationChainHandler } from "../../contracts/IModuloOperationChainHandler.js";
+import type { IEnterpriseRemainderComputationProtocolStack } from "../../contracts/IEnterpriseRemainderComputationProtocolStack.js";
 import { ValidationModuloChainHandlerImpl } from "./handlers/ValidationModuloChainHandlerImpl.js";
 import { CachingModuloChainHandlerImpl } from "./handlers/CachingModuloChainHandlerImpl.js";
 import { AuditTrailModuloChainHandlerImpl } from "./handlers/AuditTrailModuloChainHandlerImpl.js";
 import { NativeModuloOperatorChainHandlerImpl } from "./handlers/NativeModuloOperatorChainHandlerImpl.js";
+import { ProtocolStackAwareModuloChainHandlerImpl } from "./handlers/ProtocolStackAwareModuloChainHandlerImpl.js";
 
 export class ModuloOperationChainBuilder {
   private readonly preHandlers: IModuloOperationChainHandler[] = [];
@@ -10,6 +12,8 @@ export class ModuloOperationChainBuilder {
   private cachingEnabled: boolean = true;
   private auditEnabled: boolean = true;
   private validationEnabled: boolean = true;
+  private protocolStackEnabled: boolean = false;
+  private protocolStackHandler: IModuloOperationChainHandler | null = null;
 
   withValidation(enabled: boolean): this {
     this.validationEnabled = enabled;
@@ -23,6 +27,17 @@ export class ModuloOperationChainBuilder {
 
   withAudit(enabled: boolean): this {
     this.auditEnabled = enabled;
+    return this;
+  }
+
+  withProtocolStack(enabled: boolean): this {
+    this.protocolStackEnabled = enabled;
+    return this;
+  }
+
+  withProtocolStackHandler(handler: IModuloOperationChainHandler): this {
+    this.protocolStackHandler = handler;
+    this.protocolStackEnabled = true;
     return this;
   }
 
@@ -51,6 +66,12 @@ export class ModuloOperationChainBuilder {
 
     for (const handler of this.preHandlers) {
       handlers.push(handler);
+    }
+
+    if (this.protocolStackEnabled) {
+      const protocolStackHandler: IModuloOperationChainHandler =
+        this.protocolStackHandler ?? new ProtocolStackAwareModuloChainHandlerImpl();
+      handlers.push(protocolStackHandler);
     }
 
     handlers.push(new NativeModuloOperatorChainHandlerImpl());

@@ -20,7 +20,9 @@ export class AbstractBaseDivisibilityStrategyProviderResolver {
         new ProgrammaticModuloRegistrationBeanImpl();
       registrationBean.registerFactoryBeans(this.registry);
       const chainBuilder = new ModuloOperationChainBuilder();
-      this.chainHandler = chainBuilder.build();
+      this.chainHandler = chainBuilder
+        .withProtocolStack(true)
+        .build();
       this.initialized = true;
       console.debug(
         `[${AbstractBaseDivisibilityStrategyProviderResolver.RESOLVER_NAME}] Initialized with ${this.registry.getRegisteredDivisors().length} registered factory beans`,
