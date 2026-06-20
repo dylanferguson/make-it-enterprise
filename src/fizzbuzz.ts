@@ -127,6 +127,9 @@ import { EnterpriseComputedOutcomeEntityAwareResolutionFacadeDecoratorFactoryBea
 import { EnterpriseFizzBuzzComputedOutcomeEntityManagerFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeEntityManagerFactoryBeanFactory.js";
 import { EnterpriseFizzBuzzComputedOutcomeRepositoryFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeRepositoryFactoryBeanFactory.js";
 import { EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory.js";
+import { EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory } from "./transactions/factories/EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory.js";
+import { EnterpriseTransactionContextPropagatingDecoratorFactoryBeanFactory, TransactionPropagationDecoratorConfigurationProfile } from "./transactions/factories/EnterpriseTransactionContextPropagatingDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator } from "./transactions/contracts/IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -533,6 +536,19 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+      const txInfrastructure =
+        EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory.initializeInfrastructure();
+      console.debug(
+        `[EnterpriseTransactionInfrastructure] Enterprise transaction processing infrastructure initialized: ` +
+        `userTransaction=[${txInfrastructure.userTransaction.getUserTransactionName()} v${txInfrastructure.userTransaction.getUserTransactionVersion()}], ` +
+        `syncRegistry=[${txInfrastructure.synchronizationRegistry.getRegistryName()} v${txInfrastructure.synchronizationRegistry.getRegistryVersion()}], ` +
+        `rollbackStrategy=[${txInfrastructure.rollbackStrategy.getRollbackStrategyName()} v${txInfrastructure.rollbackStrategy.getRollbackStrategyVersion()}], ` +
+        `timeoutConfig=[${txInfrastructure.timeoutConfigurationProvider.getConfigurationProviderName()} v${txInfrastructure.timeoutConfigurationProvider.getConfigurationProviderVersion()}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -799,7 +815,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
       `      wovenAspects=[${aopDecorator.getAopWeaver().getRegisteredAspectCount()}]`,
     );
     const preEvaluationAware = wrapWithPreEvaluation(aopDecorator);
-    return wrapWithComputationStateMachine(preEvaluationAware);
+    const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
+    return wrapWithTransactionPropagation(stateMachineAware);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -813,7 +830,28 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     `strategies=[${executionCoordinatorAwareFacade.getExecutionCoordinator().getRegisteredExecutionStrategies().join(", ")}]`,
   );
   const preEvaluationAware = wrapWithPreEvaluation(executionCoordinatorAwareFacade);
-  return wrapWithComputationStateMachine(preEvaluationAware);
+  const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
+  return wrapWithTransactionPropagation(stateMachineAware);
+}
+
+function wrapWithTransactionPropagation(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseTransactionInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+    const transactionDecorator: IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator =
+      EnterpriseTransactionContextPropagatingDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        TransactionPropagationDecoratorConfigurationProfile.TRANSACTIONAL_REQUIRED,
+      );
+    console.debug(
+      `[TransactionPropagationDecorator] Transaction context propagation decorator applied: ` +
+      `decorator=[${transactionDecorator.getDecoratorName()} v${transactionDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${transactionDecorator.getWrappedFacade().getFacadeName()}], ` +
+      `attributeType=[${transactionDecorator.getTransactionAttributeType()}]`,
+    );
+    return transactionDecorator;
+  }
+  return facade;
 }
 
 function wrapWithComputationStateMachine(

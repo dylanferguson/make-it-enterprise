@@ -1,0 +1,10 @@
+export { TransactionAttributeType } from "./IEnterpriseTransactionAttribute.js";
+export type { IEnterpriseXid } from "./IEnterpriseXid.js";
+export type { IEnterpriseXaResource } from "./IEnterpriseXaResource.js";
+export { XaResourceReturnCode, XaResourceFlag } from "./IEnterpriseXaResource.js";
+export type { IEnterpriseUserTransaction } from "./IEnterpriseUserTransaction.js";
+export type { IEnterpriseTransactionSynchronization, TransactionSynchronizationStatus } from "./IEnterpriseTransactionSynchronization.js";
+export type { IEnterpriseTransactionSynchronizationRegistry } from "./IEnterpriseTransactionSynchronizationRegistry.js";
+export type { IEnterpriseTransactionRollbackStrategy } from "./IEnterpriseTransactionRollbackStrategy.js";
+export type { IEnterpriseTransactionTimeoutConfigurationProvider } from "./IEnterpriseTransactionTimeoutConfigurationProvider.js";
+export type { IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator } from "./IEnterpriseTransactionContextPropagatingResolutionFacadeDecorator.js";

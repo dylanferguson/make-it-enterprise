@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE transaction-service PUBLIC "-//FizzBuzz Enterprise//DTD Transaction Service 1.0//EN" "http://fizzbuzz-enterprise.local/dtd/transaction-service_1_0.dtd">
+<transaction-service>
+  <display-name>FizzBuzz Enterprise Transaction Service</display-name>
+  <description>Enterprise transaction processing infrastructure for FizzBuzz computation coordination</description>
+
+  <transaction-manager>
+    <transaction-manager-class>EnterpriseTransactionManagerFactoryBeanFactory</transaction-manager-class>
+    <transaction-timeout default="30" maximum="300" minimum="1"/>
+    <transaction-attribute-default>Required</transaction-attribute-default>
+  </transaction-manager>
+
+  <user-transaction>
+    <user-transaction-class>StandardEnterpriseUserTransactionImpl</user-transaction-class>
+    <default-timeout-seconds>30</default-timeout-seconds>
+  </user-transaction>
+
+  <synchronization-registry>
+    <registry-class>StandardEnterpriseTransactionSynchronizationRegistryImpl</registry-class>
+    <interposed-synchronization-enabled>true</interposed-synchronization-enabled>
+  </synchronization-registry>
+
+  <rollback-strategy>
+    <strategy-class>DefaultEnterpriseTransactionRollbackStrategyImpl</strategy-class>
+    <rollback-on>Error</rollback-on>
+    <rollback-on>ComputationError</rollback-on>
+    <rollback-on>ModuloEvaluationError</rollback-on>
+    <rollback-on>DivisibilityValidationError</rollback-on>
+    <rollback-on>TransactionRollbackError</rollback-on>
+    <rollback-attribute-trigger>REQUIRED</rollback-attribute-trigger>
+    <rollback-attribute-trigger>REQUIRES_NEW</rollback-attribute-trigger>
+  </rollback-strategy>
+
+  <xa-resources>
+    <xa-resource>
+      <name>ModuloComputationEnterpriseXaResource</name>
+      <implementation-class>ModuloComputationEnterpriseXaResourceImpl</implementation-class>
+      <recovery-interval-seconds>120</recovery-interval-seconds>
+    </xa-resource>
+  </xa-resources>
+
+  <container-managed-transactions>
+    <method-attribute>
+      <method-name>*</method-name>
+      <trans-attribute>Required</trans-attribute>
+    </method-attribute>
+    <method-attribute>
+      <method-name>resolveValue</method-name>
+      <trans-attribute>Required</trans-attribute>
+    </method-attribute>
+    <method-attribute>
+      <method-name>resolveRange</method-name>
+      <trans-attribute>Required</trans-attribute>
+    </method-attribute>
+  </container-managed-transactions>
+
+  <transaction-log>
+    <log-location>${fizzbuzz.home}/logs/transaction-log</log-location>
+    <log-format>XML</log-format>
+    <flush-interval-seconds>5</flush-interval-seconds>
+  </transaction-log>
+</transaction-service>
