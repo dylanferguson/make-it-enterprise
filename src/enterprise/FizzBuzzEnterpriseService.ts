@@ -35,6 +35,8 @@ import { FizzBuzzPropertyPlaceholderConfigurerImpl } from "../impl/config/FizzBu
 import type { ILifecycleManager } from "../contracts/ILifecycleManager.js";
 import type { IResourceAdapter } from "../contracts/IResourceAdapter.js";
 import { EnterpriseFizzBuzzPipelineFactoryBeanFactory, FizzBuzzPipelineConfigurationProfile } from "../impl/factories/EnterpriseFizzBuzzPipelineFactoryBean.js";
+import type { IFizzBuzzEntityHome } from "../contracts/IFizzBuzzEntityHome.js";
+import { FizzBuzzEntityHomeFactoryBeanFactory } from "../impl/entities/FizzBuzzEntityHomeFactoryBeanFactory.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -174,6 +176,9 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
       );
       const pipeline: IPipeline<number, string> = pipelineFactoryBean.createPipeline();
 
+      const entityHome: IFizzBuzzEntityHome =
+        enterpriseContext.getEntityHome();
+
       FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
         mediator,
         eventBus,
@@ -183,6 +188,7 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
         deploymentDescriptorReader,
         selectorFactory,
         strategySelector,
+        entityHome,
       );
 
       FizzBuzzEnterpriseServiceFactoryBeanFactory.initializeEnterpriseInfrastructure(
@@ -237,6 +243,16 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
     console.debug(
       `[EnterpriseInfrastructure] Resource adapter: ${FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter.getResourceAdapterName()}`,
     );
+    const entityHome = FizzBuzzEnterpriseServiceFactoryBeanFactory.instance!.getEntityHome();
+    if (entityHome !== null) {
+      const homeName = entityHome.getEntityHomeName();
+      const homeVersion = entityHome.getEntityHomeVersion();
+      const jndiName = entityHome.getJndiName();
+      const finderMethods = entityHome.getFinderMethodNames().length;
+      console.debug(
+        `[EnterpriseInfrastructure] EJB Entity Home deployed: ${homeName} v${homeVersion} @ ${jndiName} (${finderMethods} finder methods)`,
+      );
+    }
     console.debug(
       `[EnterpriseInfrastructure] Config: appName=${appName}, version=${appVersion}, cache=${cacheEnabled}`,
     );
@@ -274,6 +290,8 @@ export class FizzBuzzEnterpriseService {
   private readonly deploymentDescriptorReader: object | null;
   private readonly selectorFactory: object | null;
   private readonly strategySelector: object | null;
+  private readonly entityHome: IFizzBuzzEntityHome | null;
+  private readonly ejbDeploymentDescriptorName: string;
   private configuredApplicationName: string = "FizzBuzzEnterpriseEdition";
   private configuredApplicationVersion: string = "2.0.0-ENTERPRISE";
   private cacheEnabled: boolean = true;
@@ -287,6 +305,7 @@ export class FizzBuzzEnterpriseService {
     deploymentDescriptorReader: object | null = null,
     selectorFactory: object | null = null,
     strategySelector: object | null = null,
+    entityHome: IFizzBuzzEntityHome | null = null,
   ) {
     this.mediator = mediator;
     this.eventBus = eventBus;
@@ -296,6 +315,8 @@ export class FizzBuzzEnterpriseService {
     this.deploymentDescriptorReader = deploymentDescriptorReader;
     this.selectorFactory = selectorFactory;
     this.strategySelector = strategySelector;
+    this.entityHome = entityHome;
+    this.ejbDeploymentDescriptorName = entityHome?.getDeploymentDescriptorName() ?? "N/A";
   }
 
   setConfiguration(
@@ -314,6 +335,14 @@ export class FizzBuzzEnterpriseService {
 
   getMediator(): IFizzBuzzComputationMediator {
     return this.mediator;
+  }
+
+  getEntityHome(): IFizzBuzzEntityHome | null {
+    return this.entityHome;
+  }
+
+  getEjbDeploymentDescriptorName(): string {
+    return this.ejbDeploymentDescriptorName;
   }
 
   resolveValue(value: number): string {

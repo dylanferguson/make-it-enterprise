@@ -34,6 +34,8 @@ import { ModuloDivisibilityEvaluatorImpl } from "./evaluators/ModuloDivisibility
 import { FizzBuzzOutputFormatterImpl } from "./formatters/FizzBuzzOutputFormatterImpl.js";
 import { FizzBuzzStrategyFactoryImpl } from "./factories/FizzBuzzStrategyFactoryImpl.js";
 import type { ServiceLocatorImpl } from "./locators/ServiceLocatorImpl.js";
+import type { IFizzBuzzEntityHome } from "../contracts/IFizzBuzzEntityHome.js";
+import { FizzBuzzEntityHomeFactoryBeanFactory } from "./entities/FizzBuzzEntityHomeFactoryBeanFactory.js";
 
 export class EnterpriseApplicationContextImpl implements IEnterpriseApplicationContext {
   private readonly applicationName: string;
@@ -50,6 +52,7 @@ export class EnterpriseApplicationContextImpl implements IEnterpriseApplicationC
   private readonly divisibleByFiveSpec: DivisibleBySpecification;
   private readonly divisibleByFifteenSpec: IFizzBuzzSpecification;
   private readonly sessionManager: FizzBuzzSessionManagerImpl;
+  private readonly entityHome: IFizzBuzzEntityHome;
   private readonly healthCheckAggregator: IHealthCheckAggregator;
   private readonly sloMetricsCollector: ISloMetricsCollector;
   private readonly resultPostProcessorChain: ResultPostProcessorChainImpl;
@@ -96,10 +99,15 @@ export class EnterpriseApplicationContextImpl implements IEnterpriseApplicationC
       this.sloMetricsCollector,
     );
 
+    this.entityHome = FizzBuzzEntityHomeFactoryBeanFactory.createEntityHome(
+      this.fizzBuzzDao,
+      "META-INF/ejb-jar.xml",
+    );
     this.namingContext.bind("java:comp/env/fizzbuzz/ServiceLocator", this.serviceLocator);
     this.namingContext.bind("java:comp/env/fizzbuzz/ManagementMBean", this.managementMBean);
     this.namingContext.bind("java:comp/env/fizzbuzz/FizzBuzzDao", this.fizzBuzzDao);
     this.namingContext.bind("java:comp/env/fizzbuzz/TransferObjectFactory", this.transferObjectFactory);
+    this.namingContext.bind("java:comp/env/fizzbuzz/FizzBuzzEntityHome", this.entityHome);
   }
 
   getServiceLocator(): IServiceLocator { return this.serviceLocator; }
@@ -122,4 +130,5 @@ export class EnterpriseApplicationContextImpl implements IEnterpriseApplicationC
   getHealthCheckAggregator(): IHealthCheckAggregator { return this.healthCheckAggregator; }
   getSloMetricsCollector(): ISloMetricsCollector { return this.sloMetricsCollector; }
   getResultPostProcessorChain(): IResultPostProcessorChain { return this.resultPostProcessorChain; }
+  getEntityHome(): IFizzBuzzEntityHome { return this.entityHome; }
 }

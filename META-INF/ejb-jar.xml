@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ejb-jar PUBLIC "-//Sun Microsystems, Inc.//DTD Enterprise JavaBeans 2.0//EN" "http://java.sun.com/dtd/ejb-jar_2_0.dtd">
+<ejb-jar>
+  <display-name>FizzBuzz Enterprise Edition</display-name>
+  <enterprise-beans>
+    <entity>
+      <display-name>FizzBuzzValue</display-name>
+      <ejb-name>FizzBuzzValue</ejb-name>
+      <home>IFizzBuzzEntityHome</home>
+      <remote>FizzBuzzEntityEJBObject</remote>
+      <local-home>IFizzBuzzEntityLocalHome</local-home>
+      <local>FizzBuzzEntityEJBLocalObject</local>
+      <ejb-class>FizzBuzzEntityBeanImpl</ejb-class>
+      <persistence-type>Container</persistence-type>
+      <prim-key-class>java.lang.Integer</prim-key-class>
+      <reentrant>False</reentrant>
+      <cmp-version>2.x</cmp-version>
+      <abstract-schema-name>FizzBuzzValue</abstract-schema-name>
+      <cmp-field>
+        <field-name>value</field-name>
+      </cmp-field>
+      <cmp-field>
+        <field-name>result</field-name>
+      </cmp-field>
+      <cmp-field>
+        <field-name>createdTimestamp</field-name>
+      </cmp-field>
+      <primkey-field>value</primkey-field>
+      <query>
+        <query-method>
+          <method-name>findAll</method-name>
+          <method-params/>
+        </query-method>
+        <ejb-ql>FIND ALL OBJECT(FizzBuzzValue)</ejb-ql>
+      </query>
+      <query>
+        <query-method>
+          <method-name>findByValue</method-name>
+          <method-params>
+            <method-param>int</method-param>
+          </method-params>
+        </query-method>
+        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY value</ejb-ql>
+      </query>
+      <query>
+        <query-method>
+          <method-name>findByResultContaining</method-name>
+          <method-params>
+            <method-param>java.lang.String</method-param>
+          </method-params>
+        </query-method>
+        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY result</ejb-ql>
+      </query>
+      <query>
+        <query-method>
+          <method-name>findByResultRange</method-name>
+          <method-params>
+            <method-param>int</method-param>
+            <method-param>int</method-param>
+          </method-params>
+        </query-method>
+        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY range</ejb-ql>
+      </query>
+    </entity>
+  </enterprise-beans>
+  <assembly-descriptor>
+    <container-transaction>
+      <method>
+        <ejb-name>FizzBuzzValue</ejb-name>
+        <method-name>*</method-name>
+      </method>
+      <trans-attribute>Required</trans-attribute>
+    </container-transaction>
+  </assembly-descriptor>
+</ejb-jar>

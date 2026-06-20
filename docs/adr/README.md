@@ -10,3 +10,4 @@ FizzBuzz Enterprise Edition project.
 - [ADR-0003: Lifecycle Management Strategy](0003-lifecycle-management-strategy.md)
 - [ADR-0004: JCA Resource Adapter Integration](0004-jca-resource-adapter-integration.md)
 - [ADR-0007: Divisibility Evaluation Strategy Chain of Responsibility](0007-divisibility-evaluation-strategy-chain.md)
+- [ADR-0011: Entity Bean Container-Managed Persistence (CMP) Architecture](0011-entity-bean-container-managed-persistence.md)
