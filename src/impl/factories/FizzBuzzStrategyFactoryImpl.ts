@@ -18,12 +18,15 @@ export class FizzBuzzStrategyFactoryImpl extends AbstractBaseFizzBuzzStrategyFac
   }
 
   override createStrategies(): readonly IFizzBuzzStrategy[] {
-    const strategies: readonly IFizzBuzzStrategy[] = [
+    const rawStrategies: IFizzBuzzStrategy[] = [
       new FizzBuzzDivisibleByFifteenStrategy(this.visitor, this.formatter),
       new FizzBuzzDivisibleByThreeStrategy(this.visitor, this.formatter),
       new FizzBuzzDivisibleByFiveStrategy(this.visitor, this.formatter),
       new FizzBuzzDefaultValueStrategy(this.visitor, this.formatter),
     ];
-    return this.sortByPriority(strategies);
+    for (const strategy of rawStrategies) {
+      this.applyCrossCuttingConcerns(strategy);
+    }
+    return this.sortByPriority(rawStrategies);
   }
 }

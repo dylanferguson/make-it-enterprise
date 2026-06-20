@@ -27,6 +27,11 @@ import { SessionManagedResolverProxy } from "../proxies/SessionManagedResolverPr
 import { ResultPostProcessorChainImpl } from "../postprocessors/ResultPostProcessorChainImpl.js";
 import { ValidatingResultPostProcessorImpl } from "../postprocessors/ValidatingResultPostProcessorImpl.js";
 import { FizzBuzzEnterpriseResultValidatorImpl } from "../validators/FizzBuzzEnterpriseResultValidatorImpl.js";
+import { DivisibilityStrategyProviderFactoryBean } from "../factories/DivisibilityStrategyProviderFactoryBean.js";
+import type { IDivisibilityStrategyProvider } from "../../contracts/IDivisibilityStrategyProvider.js";
+import { FizzBuzzEnterpriseServiceComponentValidatorImpl } from "../validators/FizzBuzzEnterpriseServiceComponentValidatorImpl.js";
+import type { IEnterpriseServiceComponentValidator } from "../../contracts/IEnterpriseServiceComponentValidator.js";
+import { StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean } from "../factories/StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -48,7 +53,18 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     const visitor = new DivisibilityCheckVisitor(strategyProvider);
     const outputFormatter: IFizzBuzzOutputFormatter = new FizzBuzzOutputFormatterImpl();
     const evaluator: IDivisibilityEvaluator = new ModuloDivisibilityEvaluatorImpl(strategyProvider);
-    const strategyFactory: IFizzBuzzStrategyFactory = new FizzBuzzStrategyFactoryImpl(visitor, outputFormatter);
+
+    const divisibilityStrategyProvider: IDivisibilityStrategyProvider =
+      DivisibilityStrategyProviderFactoryBean.createProvider(visitor, strategyProvider);
+    const componentValidator: IEnterpriseServiceComponentValidator =
+      new FizzBuzzEnterpriseServiceComponentValidatorImpl();
+    const templateMethodFrameworkProvider =
+      StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean.createFrameworkProvider();
+
+    const strategyFactoryImpl = new FizzBuzzStrategyFactoryImpl(visitor, outputFormatter);
+    strategyFactoryImpl.setDivisibilityStrategyProvider(divisibilityStrategyProvider);
+    strategyFactoryImpl.setComponentValidator(componentValidator);
+    const strategyFactory: IFizzBuzzStrategyFactory = strategyFactoryImpl;
 
     const handlerChain = new FizzBuzzHandlerChain(strategyFactory, outputFormatter);
     const baseResolver = new CompositeValueResolverImpl(handlerChain.getHead());
