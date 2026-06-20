@@ -163,6 +163,11 @@ import { EnterpriseConfigurationDescriptorParserFactoryBeanFactory } from "./ent
 import { EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseDecoratorChainConfigurationRegistryFactoryBeanFactory.js";
 import { EnterpriseOrchestrationMediationServiceFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseOrchestrationMediationServiceFactoryBeanFactory.js";
 import { EnterpriseOrchestrationMediationServiceAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./enterpriseconfiguration/factories/EnterpriseOrchestrationMediationServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory } from "./computationadapter/factories/EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory.js";
+import { ComputationResolutionMediatorArchitectureAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computationadapter/factories/ComputationResolutionMediatorArchitectureAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { ComputationResolutionAdapterRegistryFactoryBeanFactory } from "./computationadapter/factories/ComputationResolutionAdapterRegistryFactoryBeanFactory.js";
+import { DivisorSpecificComputationAdapterFactoryBeanFactory } from "./computationadapter/factories/DivisorSpecificComputationAdapterFactoryBeanFactory.js";
+import type { IEnterpriseComputationResolutionMediatorArchitecture } from "./computationadapter/contracts/IEnterpriseComputationResolutionMediatorArchitecture.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -715,6 +720,33 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory.isArchitectureInitialized()) {
+      const mediatorArch = EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory.initializeArchitecture();
+      const registry = ComputationResolutionAdapterRegistryFactoryBeanFactory.createRegistry();
+      const threeAdapter = DivisorSpecificComputationAdapterFactoryBeanFactory.createAdapter(3, "Fizz");
+      const fiveAdapter = DivisorSpecificComputationAdapterFactoryBeanFactory.createAdapter(5, "Buzz");
+      const fifteenAdapter = DivisorSpecificComputationAdapterFactoryBeanFactory.createAdapter(15, "FizzBuzz");
+      registry.registerAdapter(fifteenAdapter);
+      registry.registerAdapter(threeAdapter);
+      registry.registerAdapter(fiveAdapter);
+      console.debug(
+        `[ComputationResolutionMediatorArchitectureInfrastructure] Enterprise computation adapter mediator architecture initialized: ` +
+        `arch=[${mediatorArch.getArchitectureName()} v${mediatorArch.getArchitectureVersion()}], ` +
+        `registry=[${registry.getRegistryName()} v${registry.getRegistryVersion()}], ` +
+        `registeredAdapters=[${registry.getRegisteredAdapterNames().join(", ")}], ` +
+        `adapterCount=[${registry.getAdapterCount()}], ` +
+        `visitor=[${mediatorArch.getVisitor().getVisitorName()} v${mediatorArch.getVisitor().getVisitorVersion()}], ` +
+        `chain=[${mediatorArch.getChainHandler().getHandlerName()} v${mediatorArch.getChainHandler().getHandlerVersion()}], ` +
+        `threeAdapter=[${threeAdapter.getAdapterName()} v${threeAdapter.getAdapterVersion()}], ` +
+        `fiveAdapter=[${fiveAdapter.getAdapterName()} v${fiveAdapter.getAdapterVersion()}], ` +
+        `fifteenAdapter=[${fifteenAdapter.getAdapterName()} v${fifteenAdapter.getAdapterVersion()}], ` +
+        `threeCanHandle15=[${threeAdapter.canHandle(15)}], ` +
+        `fiveCanHandle15=[${fiveAdapter.canHandle(15)}], ` +
+        `fifteenCanHandle15=[${fifteenAdapter.canHandle(15)}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -986,9 +1018,9 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
     const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
     const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
-    return wrapWithOrchestrationMediationResolution(
-      wrapWithStrategyLookupServiceResolution(postProcessed),
-    );
+    const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
+    const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
+    return wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1007,9 +1039,38 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
   const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
   const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
-  return wrapWithOrchestrationMediationResolution(
-    wrapWithStrategyLookupServiceResolution(postProcessed),
-  );
+  const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
+  const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
+  return wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+}
+
+function wrapWithComputationResolutionMediatorArchitecture(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory.isArchitectureInitialized()) {
+    const architecture = EnterpriseComputationResolutionMediatorArchitectureFactoryBeanFactory.getArchitecture()!;
+    const mediatorDecorator =
+      ComputationResolutionMediatorArchitectureAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        architecture,
+        true,
+      );
+    const registeredAdapters = architecture.getRegisteredAdapters().map(
+      (a) => `${a.getAdapterName()}@D${a.getAdapterDivisor()}:${a.getAdapterOutputLabel()}`,
+    );
+    console.debug(
+      `[ComputationResolutionMediatorArchitectureAwareDecorator] Adapter mediator architecture-aware facade decorator applied: ` +
+      `decorator=[${mediatorDecorator.getDecoratorName()} v${mediatorDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${mediatorDecorator.getWrappedFacade().getFacadeName()}], ` +
+      `arch=[${architecture.getArchitectureName()} v${architecture.getArchitectureVersion()}], ` +
+      `archReady=[${architecture.isArchitectureReady()}], ` +
+      `registeredAdapters=[${registeredAdapters.join(", ")}], ` +
+      `adapterCount=[${architecture.getRegisteredAdapters().length}], ` +
+      `decoratorEnabled=[${mediatorDecorator.isDecoratorEnabled()}]`,
+    );
+    return mediatorDecorator;
+  }
+  return facade;
 }
 
 function wrapWithAbstractDivisibilityStrategyResolution(
