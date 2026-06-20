@@ -59,6 +59,8 @@ import { LocalizedMessageResolutionChainHandlerFactoryBeanFactory } from "./loca
 import { LocaleResolutionStrategyFactoryBeanFactory } from "./localization/impl/factories/LocaleResolutionStrategyFactoryBeanFactory.js";
 import type { ILocalizedMessageResolver } from "./localization/contracts/ILocalizedMessageResolver.js";
 import { DefaultLocaleResolutionStrategyImpl } from "./localization/impl/locales/DefaultLocaleResolutionStrategyImpl.js";
+import type { IEnterpriseFizzBuzzPublicApiResolutionDelegate } from "./contracts/IEnterpriseFizzBuzzPublicApiResolutionDelegate.js";
+import { EnterpriseFizzBuzzPublicApiResolutionDelegateFactoryBeanFactory } from "./impl/publicapi/factories/EnterpriseFizzBuzzPublicApiResolutionDelegateFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -386,23 +388,21 @@ function resolveBuilderPipelineProduct(): IFizzBuzzComputationPipelineProduct {
   return builderPipelineProduct!;
 }
 
+let publicApiDelegate: IEnterpriseFizzBuzzPublicApiResolutionDelegate | null = null;
+
+function resolvePublicApiDelegate(): IEnterpriseFizzBuzzPublicApiResolutionDelegate {
+  if (publicApiDelegate === null) {
+    publicApiDelegate = EnterpriseFizzBuzzPublicApiResolutionDelegateFactoryBeanFactory.createDelegate();
+  }
+  return publicApiDelegate!;
+}
+
 export function fizzBuzzValue(value: number): string {
-  const product = resolveBuilderPipelineProduct();
-  const orchestrator = resolveMediationOrchestrator();
-  return product.resolveSingleValue(value);
+  const delegate = resolvePublicApiDelegate();
+  return delegate.resolveSingleValue(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const product = resolveBuilderPipelineProduct();
-  const iterator = StandardFizzBuzzRangeIteratorFactoryBeanFactory.createIterator(
-    start,
-    end,
-    (v: number) => product.resolveSingleValue(v),
-    false,
-  );
-  const results: string[] = [];
-  while (iterator.hasNext()) {
-    results.push(iterator.next().getValue());
-  }
-  return results;
+  const delegate = resolvePublicApiDelegate();
+  return delegate.resolveRange(start, end);
 }
