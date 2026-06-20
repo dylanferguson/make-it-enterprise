@@ -41,3 +41,27 @@ export interface IPreEvaluationAwareResolutionFacadeDecorator
   getDecoratorVersion(): string;
   isPreEvaluationEnabled(): boolean;
 }
+
+export type {
+  IFizzBuzzComputedOutcomeTransferObject,
+} from "../transferobjects/IFizzBuzzComputedOutcomeTransferObject.js";
+
+export type {
+  IFizzBuzzComputedOutcomeEntity,
+} from "../entities/IFizzBuzzComputedOutcomeEntity.js";
+
+export type {
+  IFizzBuzzComputedOutcomeEntityHome,
+} from "../entities/IFizzBuzzComputedOutcomeEntityHome.js";
+
+export type {
+  IEntityManager,
+} from "../persistence/IEntityManager.js";
+
+export type {
+  IPersistenceContext,
+} from "../persistence/IPersistenceContext.js";
+
+export type {
+  IFizzBuzzComputedOutcomeRepository,
+} from "../repository/IFizzBuzzComputedOutcomeRepository.js";

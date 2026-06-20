@@ -122,6 +122,11 @@ import { ComputationStateMachineMediatorFactoryBeanFactory } from "./computation
 import { ComputationStateTransitionVisitorFactoryBeanFactory } from "./computationstate/factories/ComputationStateTransitionVisitorFactoryBeanFactory.js";
 import { ComputationStateMachineAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computationstate/factories/ComputationStateMachineAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IComputationStateMachineAwareResolutionFacadeDecorator } from "./computationstate/contracts/IComputationStateMachineAwareResolutionFacadeDecorator.js";
+import { EnterpriseComputedOutcomeEntityInfrastructureInitializerFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseComputedOutcomeEntityInfrastructureInitializerFactoryBeanFactory.js";
+import { EnterpriseComputedOutcomeEntityAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseComputedOutcomeEntityAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzComputedOutcomeEntityManagerFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeEntityManagerFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzComputedOutcomeRepositoryFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeRepositoryFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -463,6 +468,19 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
     );
   }
   {
+    if (!EnterpriseComputedOutcomeEntityInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+      const entityInfra = EnterpriseComputedOutcomeEntityInfrastructureInitializerFactoryBeanFactory.initializeInfrastructure();
+      console.debug(
+        `[ComputedOutcomeEntityInfrastructure] Enterprise computed outcome entity bean container infrastructure initialized: ` +
+        `persistenceContext=[${entityInfra.persistenceContext.getContextName()} v${entityInfra.persistenceContext.getContextVersion()}], ` +
+        `entityManager=[${entityInfra.entityManager.getEntityManagerName()} v${entityInfra.entityManager.getEntityManagerVersion()}], ` +
+        `repository=[${entityInfra.repository.getRepositoryName()} v${entityInfra.repository.getRepositoryVersion()}], ` +
+        `entityHome=[${entityInfra.entityHome.getHomeName()} v${entityInfra.entityHome.getHomeVersion()}], ` +
+        `supportedEntity=[${entityInfra.entityHome.getSupportedEntityName()}]`,
+      );
+    }
+  }
+  {
     const delegationOrchestratorFactoryFactory =
       EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactoryFactory.createFactoryFactory();
     if (!delegationOrchestratorFactoryFactory.createFactory().isOrchestratorInitialized()) {
@@ -692,11 +710,30 @@ function wrapWithPreEvaluation(
   const registry = EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory.getRegistry();
   const chain = EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory.getChain();
   if (registry !== null && chain !== null) {
-    return EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+    const preEvaluationDecorator = EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
       facade,
       chain,
       registry,
     );
+
+    if (EnterpriseComputedOutcomeEntityInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+      const entityManager =
+        EnterpriseFizzBuzzComputedOutcomeEntityManagerFactoryBeanFactory.getEntityManager()!;
+      const repository =
+        EnterpriseFizzBuzzComputedOutcomeRepositoryFactoryBeanFactory.getRepository()!;
+      const entityHome =
+        EnterpriseFizzBuzzComputedOutcomeEntityHomeFactoryBeanFactory.getEntityHome()!;
+      return EnterpriseComputedOutcomeEntityAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        preEvaluationDecorator,
+        chain,
+        registry,
+        entityManager,
+        repository,
+        entityHome,
+      );
+    }
+
+    return preEvaluationDecorator;
   }
   throw new Error(
     `[PreEvaluationInfrastructure] Pre-evaluation command chain infrastructure not initialized. ` +
