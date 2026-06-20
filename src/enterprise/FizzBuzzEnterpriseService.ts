@@ -8,11 +8,15 @@ import { RetryValueResolverDecorator } from "../patterns/RetryValueResolverDecor
 import { FallbackValueResolverDecorator } from "../patterns/FallbackValueResolverDecorator.js";
 import { SessionManagedResolverProxy } from "../impl/proxies/SessionManagedResolverProxy.js";
 import type { ICompositeValueResolver } from "../contracts/ICompositeValueResolver.js";
+import type { IComputationEventNotificationBus } from "../contracts/IComputationEventNotificationBus.js";
 import { XmlDeploymentDescriptorReaderImpl } from "../impl/descriptors/XmlDeploymentDescriptorReaderImpl.js";
 import { DefaultStrategySelectorFactoryImpl } from "../impl/factories/DefaultStrategySelectorFactoryImpl.js";
 import { FizzBuzzTransactionManagerImpl } from "../impl/transactions/FizzBuzzTransactionManagerImpl.js";
 import { FizzBuzzServiceHomeImpl } from "../impl/homes/FizzBuzzServiceHomeImpl.js";
 import { ModuloArithmeticStrategyProviderImpl } from "../impl/providers/ModuloArithmeticStrategyProviderImpl.js";
+import { ComputationEventNotificationBusFactoryBeanFactory } from "../impl/factories/ComputationEventNotificationBusFactoryBean.js";
+import { ValueResolvedComputationEventImpl } from "../impl/events/ValueResolvedComputationEventImpl.js";
+import { RangeComputationCompletedEventImpl } from "../impl/events/RangeComputationCompletedEventImpl.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -86,6 +90,13 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
         },
       };
 
+      const eventBusFactoryBean = ComputationEventNotificationBusFactoryBeanFactory.createFactoryBean(
+        enterpriseContext.getNamingContext(),
+        sloCollector,
+      );
+      const eventBus: IComputationEventNotificationBus =
+        eventBusFactoryBean.createNotificationBus();
+
       const transactionManager = new FizzBuzzTransactionManagerImpl();
       const serviceHome = new FizzBuzzServiceHomeImpl(
         daoWrappingResolver,
@@ -96,6 +107,7 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 
       FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
         managedBean.getValueResolver(),
+        eventBus,
         serviceHome,
         transactionManager,
         deploymentDescriptorReader,
@@ -113,6 +125,7 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 
 export class FizzBuzzEnterpriseService {
   private readonly valueResolver: ICompositeValueResolver;
+  private readonly eventBus: IComputationEventNotificationBus;
   private readonly serviceHome: object | null;
   private readonly transactionManager: object | null;
   private readonly deploymentDescriptorReader: object | null;
@@ -121,6 +134,7 @@ export class FizzBuzzEnterpriseService {
 
   constructor(
     valueResolver: ICompositeValueResolver,
+    eventBus: IComputationEventNotificationBus,
     serviceHome: object | null = null,
     transactionManager: object | null = null,
     deploymentDescriptorReader: object | null = null,
@@ -128,6 +142,7 @@ export class FizzBuzzEnterpriseService {
     strategySelector: object | null = null,
   ) {
     this.valueResolver = valueResolver;
+    this.eventBus = eventBus;
     this.serviceHome = serviceHome;
     this.transactionManager = transactionManager;
     this.deploymentDescriptorReader = deploymentDescriptorReader;
@@ -135,12 +150,37 @@ export class FizzBuzzEnterpriseService {
     this.strategySelector = strategySelector;
   }
 
+  getEventBus(): IComputationEventNotificationBus {
+    return this.eventBus;
+  }
+
   resolveValue(value: number): string {
-    return this.valueResolver.resolve(value);
+    const startTime = performance.now();
+    const result = this.valueResolver.resolve(value);
+    const durationMs = performance.now() - startTime;
+    const event = new ValueResolvedComputationEventImpl(
+      "FizzBuzzEnterpriseService",
+      value,
+      result,
+      durationMs,
+    );
+    this.eventBus.publishEvent(event);
+    return result;
   }
 
   calculateRange(start: number, end: number): readonly string[] {
+    const rangeStartTime = performance.now();
     const length = end - start + 1;
-    return Array.from({ length }, (_, index) => this.resolveValue(start + index));
+    const results = Array.from({ length }, (_, index) => this.resolveValue(start + index));
+    const totalDurationMs = performance.now() - rangeStartTime;
+    const rangeEvent = new RangeComputationCompletedEventImpl(
+      "FizzBuzzEnterpriseService",
+      start,
+      end,
+      results.length,
+      totalDurationMs,
+    );
+    this.eventBus.publishEvent(rangeEvent);
+    return results;
   }
 }
