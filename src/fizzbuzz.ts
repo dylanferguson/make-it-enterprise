@@ -116,6 +116,12 @@ import { EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFac
 import { ResolutionDelegationVisitorFactoryBeanFactory } from "./resolutiondelegation/visitors/factories/ResolutionDelegationVisitorFactoryBeanFactory.js";
 import { EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory } from "./resolutiondelegation/factories/EnterpriseFizzBuzzResolutionDelegationOrchestratorFactoryBeanFactoryFactory.js";
 import { DefaultResolutionDelegationConfiguratorBuilderImpl } from "./resolutiondelegation/builders/impl/DefaultResolutionDelegationConfiguratorBuilderImpl.js";
+import { ComputationStateInfrastructureInitializerFactoryBeanFactory } from "./computationstate/factories/ComputationStateInfrastructureInitializerFactoryBeanFactory.js";
+import { ComputationStateMachineFactoryBeanFactory } from "./computationstate/factories/ComputationStateMachineFactoryBeanFactory.js";
+import { ComputationStateMachineMediatorFactoryBeanFactory } from "./computationstate/factories/ComputationStateMachineMediatorFactoryBeanFactory.js";
+import { ComputationStateTransitionVisitorFactoryBeanFactory } from "./computationstate/factories/ComputationStateTransitionVisitorFactoryBeanFactory.js";
+import { ComputationStateMachineAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computationstate/factories/ComputationStateMachineAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IComputationStateMachineAwareResolutionFacadeDecorator } from "./computationstate/contracts/IComputationStateMachineAwareResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -414,6 +420,22 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `weaver=[${aopWeaver?.getWeaverName() ?? "N/A"} v${aopWeaver?.getWeaverVersion() ?? "N/A"}], ` +
         `registeredAspects=[${aopWeaver?.getRegisteredAspectCount() ?? 0}], ` +
         `pointcuts=[${aopWeaver?.getRegisteredPointcuts().map((p) => p.getPointcutName()).join(", ") ?? "N/A"}]`,
+      );
+    }
+  }
+  {
+    if (!ComputationStateInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+      const initialized = ComputationStateInfrastructureInitializerFactoryBeanFactory.initializeInfrastructure();
+      const machine = ComputationStateMachineFactoryBeanFactory.getStateMachine();
+      const mediator = ComputationStateMachineMediatorFactoryBeanFactory.getMediator();
+      const visitor = ComputationStateTransitionVisitorFactoryBeanFactory.getVisitor();
+      console.debug(
+        `[ComputationStateInfrastructure] Enterprise computation state machine infrastructure initialized: ` +
+        `initialized=[${initialized}], ` +
+        `machine=[${machine?.getStateMachineName() ?? "N/A"} v${machine?.getStateMachineVersion() ?? "N/A"}], ` +
+        `mediator=[${mediator?.getMediatorName() ?? "N/A"} v${mediator?.getMediatorVersion() ?? "N/A"}], ` +
+        `visitor=[${visitor?.getVisitorName() ?? "N/A"} v${visitor?.getVisitorVersion() ?? "N/A"}], ` +
+        `states=[${machine?.getStateTransitionHistory().join(", ") ?? "N/A"}]`,
       );
     }
   }
@@ -739,7 +761,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
       `weaver=[${aopDecorator.getAopWeaver().getWeaverName()} v${aopDecorator.getAopWeaver().getWeaverVersion()}], ` +
       `      wovenAspects=[${aopDecorator.getAopWeaver().getRegisteredAspectCount()}]`,
     );
-    return wrapWithPreEvaluation(aopDecorator);
+    const preEvaluationAware = wrapWithPreEvaluation(aopDecorator);
+    return wrapWithComputationStateMachine(preEvaluationAware);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -752,7 +775,26 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     `coordinatorEngaged=[${executionCoordinatorAwareFacade.isCoordinatorEngaged()}], ` +
     `strategies=[${executionCoordinatorAwareFacade.getExecutionCoordinator().getRegisteredExecutionStrategies().join(", ")}]`,
   );
-  return wrapWithPreEvaluation(executionCoordinatorAwareFacade);
+  const preEvaluationAware = wrapWithPreEvaluation(executionCoordinatorAwareFacade);
+  return wrapWithComputationStateMachine(preEvaluationAware);
+}
+
+function wrapWithComputationStateMachine(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  const stateMachineDecorator: IComputationStateMachineAwareResolutionFacadeDecorator =
+    ComputationStateMachineAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      facade,
+      50,
+    );
+  console.debug(
+    `[ComputationStateMachineDecorator] State machine-aware facade decorator applied: ` +
+    `decorator=[${stateMachineDecorator.getDecoratorName()} v${stateMachineDecorator.getDecoratorVersion()}], ` +
+    `stateMachine=[${stateMachineDecorator.getStateMachine().getStateMachineName()} v${stateMachineDecorator.getStateMachine().getStateMachineVersion()}], ` +
+    `mediator=[${stateMachineDecorator.getMediator().getMediatorName()} v${stateMachineDecorator.getMediator().getMediatorVersion()}], ` +
+    `slaCompliance=[${stateMachineDecorator.getSlaCompliancePercentage().toFixed(2)}%]`,
+  );
+  return stateMachineDecorator;
 }
 
 let mdbCallbackRegistered = false;
