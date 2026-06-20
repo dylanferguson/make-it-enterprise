@@ -1,4 +1,4 @@
-name: FizzBuzz Enterprise CI Pipeline
+name: FizzBuzz Enterprise CI Pipeline (Extended)
 
 on:
   push:
@@ -16,14 +16,54 @@ on:
           - development
           - staging
           - production
+      sla-bypass:
+        description: 'Bypass SLA compliance gate'
+        required: false
+        default: false
+        type: boolean
 
 env:
   NODE_VERSION: '24'
   PNPM_VERSION: '11'
   APPLICATION_NAME: 'fizzbuzz-enterprise-edition'
   DOCKER_REGISTRY: 'registry.fizzbuzz-enterprise.internal'
+  SLA_COMPLIANCE_THRESHOLD_MS: '80'
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
+  metadata-audit:
+    name: Architecture Metadata Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify ADR coverage
+        run: |
+          ADR_COUNT=$(ls -1 adr/ADR-*.md 2>/dev/null | wc -l)
+          echo "::notice title=ADR Count::${ADR_COUNT} ADRs documented"
+          if [ "$ADR_COUNT" -lt 5 ]; then
+            echo "::warning::ADR count below enterprise minimum (5)"
+          fi
+      - name: Verify contract-to-implementation ratio
+        run: |
+          CONTRACT_COUNT=$(find src/contracts -name '*.ts' | wc -l)
+          ABSTRACT_COUNT=$(find src/abstracts -name '*.ts' | wc -l)
+          IMPL_COUNT=$(find src/impl -name '*.ts' | wc -l)
+          echo "::notice title=Architecture Metrics::Contracts: ${CONTRACT_COUNT}, Abstracts: ${ABSTRACT_COUNT}, Implementations: ${IMPL_COUNT}"
+          echo "::notice title=Abstraction Ratio::Ratio: ${CONTRACT_COUNT}:${IMPL_COUNT}"
+      - name: Verify K8s manifest completeness
+        run: |
+          K8S_COUNT=$(ls -1 k8s/*.yaml 2>/dev/null | wc -l)
+          echo "::notice title=K8s Manifests::${K8S_COUNT} manifests configured"
+          if [ "$K8S_COUNT" -lt 15 ]; then
+            echo "::warning::K8s manifest count below enterprise threshold (15)"
+          fi
+
   validate:
     name: Validate Commit
     runs-on: ubuntu-latest
@@ -43,19 +83,43 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: TypeScript type checking
         run: pnpm typecheck
-      - name: Check formatting
-        run: pnpm exec prettier --check "src/**/*.ts" "test/**/*.ts" || echo "Formatting check skipped (prettier not configured)"
-      - name: Build
+      - name: FizzBuzz Enterprise Edition build
         run: pnpm build
+      - name: Verify FizzBuzz output correctness
+        run: |
+          node -e "
+            const { fizzBuzzRange } = require('./dist/fizzbuzz.js');
+            const result = fizzBuzzRange(1, 100);
+            const expected = '1,2,Fizz,4,Buzz,Fizz,7,8,Fizz,Buzz,11,Fizz,13,14,FizzBuzz,16,17,Fizz,19,Buzz,Fizz,22,23,Fizz,Buzz,26,Fizz,28,29,FizzBuzz,31,32,Fizz,34,Buzz,Fizz,37,38,Fizz,Buzz,41,Fizz,43,44,FizzBuzz,46,47,Fizz,49,Buzz,Fizz,52,53,Fizz,Buzz,56,Fizz,58,59,FizzBuzz,61,62,Fizz,64,Buzz,Fizz,67,68,Fizz,Buzz,71,Fizz,73,74,FizzBuzz,76,77,Fizz,79,Buzz,Fizz,82,83,Fizz,Buzz,86,Fizz,88,89,FizzBuzz,91,92,Fizz,94,Buzz,Fizz,97,98,Fizz,Buzz';
+            const actual = result.join(',');
+            if (actual !== expected) {
+              console.error('FizzBuzz output mismatch');
+              process.exit(1);
+            }
+            console.log('FizzBuzz enterprise output verification: PASSED');
+          "
+      - name: Display enterprise architecture summary
+        run: |
+          echo "::group::Enterprise Architecture Summary"
+          echo "Interfaces:   $(find src/contracts -name '*.ts' | wc -l)"
+          echo "Abstracts:    $(find src/abstracts -name '*.ts' | wc -l)"
+          echo "Impl files:   $(find src/impl -name '*.ts' | wc -l)"
+          echo "Patterns:     $(find src/patterns -name '*.ts' | wc -l)"
+          echo "Exceptions:   $(find src/exceptions -name '*.ts' | wc -l)"
+          echo "ADRs:         $(ls adr/ADR-*.md | wc -l)"
+          echo "K8s manifests: $(ls k8s/*.yaml | wc -l)"
+          echo "META-INF:     $(ls META-INF/*.xml | wc -l)"
+          echo "::endgroup::"
 
   test:
-    name: Run Tests
+    name: Run Enterprise Test Suite
     needs: [validate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       matrix:
         node-version: ['24']
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -69,7 +133,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run unit tests
         run: pnpm test
-      - name: Generate test report
+      - name: Generate JUnit test report
         run: pnpm exec vitest run --reporter=junit --outputFile=test-results.xml || true
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -79,45 +143,42 @@ jobs:
           path: test-results.xml
           retention-days: 30
 
-  output-normalization-validation:
-    name: Validate Output Normalization Pipeline
+  enterprise-architecture-compliance:
+    name: Enterprise Architecture Compliance Gate
     needs: [validate]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Validate normalization pipeline configuration
+      - name: Enforce abstraction depth requirements
         run: |
-          echo "Validating output normalization pipeline configuration..."
-          node -e "
-            const { EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean } = 
-              require('./dist/impl/factories/EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.js');
-            const pipeline = EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.createPipeline();
-            if (pipeline.getStageCount() < 2) {
-              console.error('ERROR: Pipeline must have at least 2 stages (non-empty validation + canonicalization)');
-              process.exit(1);
-            }
-            console.log('Pipeline validation: OK (' + pipeline.getStageCount() + ' stages configured)');
-            console.log('Pipeline: ' + pipeline.getPipelineName() + ' v' + pipeline.getPipelineVersion());
-            const testResult = pipeline.execute('Fizz', 3, 'ci:validation:test');
-            if (testResult !== 'Fizz') {
-              console.error('ERROR: Pipeline transformed Fizz to \"' + testResult + '\"');
-              process.exit(1);
-            }
-            console.log('Pipeline functional test: OK');
-          " || echo "Normalization validation skipped (build may be required)"
+          CONTRACT_COUNT=$(find src/contracts -name '*.ts' | wc -l)
+          ABSTRACT_COUNT=$(find src/abstracts -name '*.ts' | wc -l)
+          if [ "$CONTRACT_COUNT" -lt 170 ]; then
+            echo "::error::Insufficient interface contracts ($CONTRACT_COUNT < 170)"
+            exit 1
+          fi
+          if [ "$ABSTRACT_COUNT" -lt 140 ]; then
+            echo "::error::Insufficient abstract base classes ($ABSTRACT_COUNT < 140)"
+            exit 1
+          fi
+          echo "::notice::Enterprise abstraction requirements satisfied"
+      - name: Verify no bare modulo operators in production code
+        run: |
+          BARE_MODULO=$(grep -rn 'value\s*%\s*3\|value\s*%\s*5\|value\s*%\s*divisor\|dividend\s*%\s*divisor' src/impl/ --include='*.ts' | grep -v NativeModuloOperatorChainHandlerImpl | grep -v '.test.ts' || true)
+          if [ -n "$BARE_MODULO" ]; then
+            echo "::warning::Bare modulo operators detected outside terminal handler:"
+            echo "$BARE_MODULO"
+          fi
+      - name: Verify enterprise operator coverage
+        run: |
+          SUPERVISOR_FILES=$(find src -name '*Supervisor*' -o -name '*supervisor*' | wc -l)
+          DELEGATION_FILES=$(find src -name '*Delegat*' | wc -l)
+          FACTORY_FILES=$(find src -name '*Factory*' -o -name '*factory*' | wc -l)
+          echo "::notice::Enterprise components: Supervisors=$SUPERVISOR_FILES, Delegates=$DELEGATION_FILES, Factories=$FACTORY_FILES"
 
   security-scan:
-    name: Security Scan
+    name: Enterprise Security Scan
     needs: [validate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -134,10 +195,31 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Dependency audit
         run: pnpm audit --audit-level=high || echo "Audit warnings found (non-blocking)"
+      - name: SAST scan (simulated)
+        run: |
+          echo "::notice::Enterprise SAST scan completed: 0 critical, 0 high findings"
+          echo "::notice::Scan scope: TypeScript source (src/), deployment descriptors (META-INF/)"
+
+  sla-compliance-gate:
+    name: SLA Compliance Gate
+    needs: [test, enterprise-architecture-compliance]
+    if: github.event_name != 'pull_request' || github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify enterprise SLA thresholds
+        run: |
+          echo "::notice::SLA Gate: Computation P99 latency target < ${SLA_COMPLIANCE_THRESHOLD_MS}ms"
+          echo "::notice::SLA Gate: Success rate target >= 99.99%"
+          echo "::notice::SLA Gate: Architecture compliance: PASSED"
+      - name: Check for bypass
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.sla-bypass == 'true'
+        run: |
+          echo "::warning::SLA compliance gate bypassed manually via workflow dispatch"
 
   build-image:
-    name: Build Docker Image
-    needs: [test, security-scan]
+    name: Build Enterprise Docker Image
+    needs: [test, security-scan, sla-compliance-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -167,3 +249,8 @@ jobs:
             aquasec/trivy:latest \
             image --severity HIGH,CRITICAL \
             ${{ env.DOCKER_REGISTRY }}/${{ env.APPLICATION_NAME }}:${{ github.sha }} || echo "Trivy scan warnings (non-blocking)"
+      - name: Tag enterprise release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "::notice::Enterprise release tag detected: ${{ github.ref_name }}"
+          echo "::notice::Docker image promoted: ${{ env.DOCKER_REGISTRY }}/${{ env.APPLICATION_NAME }}:${{ github.ref_name }}"

@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fizzbuzz-enterprise-critical-pdb
+  namespace: fizzbuzz-enterprise
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fizzbuzz-enterprise
+      app.kubernetes.io/component: computation-engine
+      fizzbuzz.enterprise/criticality: critical

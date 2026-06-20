@@ -1,16 +1,21 @@
 import { AbstractBaseFizzBuzzExpression } from "../../abstracts/AbstractBaseFizzBuzzExpression.js";
 import type { IFizzBuzzExpressionVisitor } from "../../contracts/IFizzBuzzExpressionVisitor.js";
 import type { IRemainderComputationSupervisor } from "../../contracts/IRemainderComputationSupervisor.js";
+import type { IDivisibleByFallbackComputationStrategyChainHandler } from "../../contracts/IDivisibleByFallbackComputationStrategyChainHandler.js";
 import { ExpressionEvaluationException } from "../../exceptions/ExpressionEvaluationException.js";
 import { DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory } from "../factories/DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.js";
+import { DivisibleByExpressionFallbackComputationStrategyChainFactoryBean } from "../factories/DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.js";
 import { DivisibilityEvaluationException } from "../../exceptions/DivisibilityEvaluationException.js";
 
 export class DivisibleByExpressionImpl extends AbstractBaseFizzBuzzExpression {
   private static readonly EXPRESSION_TYPE = "DivisibleByExpression";
   private static readonly COMPUTATION_CONTEXT = "DivisibleByExpressionEnterpriseEvaluation";
+  private static readonly FALLBACK_COMPUTATION_CONTEXT = "DivisibleByExpressionFallbackEvaluation";
   private readonly divisor: number;
   private remainderSupervisor: IRemainderComputationSupervisor | null = null;
   private supervisorResolutionAttempted = false;
+  private fallbackChain: IDivisibleByFallbackComputationStrategyChainHandler | null = null;
+  private fallbackChainResolutionAttempted = false;
 
   constructor(divisor: number) {
     super();
@@ -44,6 +49,24 @@ export class DivisibleByExpressionImpl extends AbstractBaseFizzBuzzExpression {
     return this.remainderSupervisor;
   }
 
+  private resolveFallbackComputationChain(): IDivisibleByFallbackComputationStrategyChainHandler {
+    if (!this.fallbackChainResolutionAttempted) {
+      this.fallbackChainResolutionAttempted = true;
+      try {
+        this.fallbackChain =
+          DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.buildSingletonFallbackComputationChain(true);
+      } catch {
+        this.fallbackChain =
+          DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.buildSingletonFallbackComputationChain(false);
+      }
+    }
+    return this.fallbackChain!;
+  }
+
+  getFallbackComputationChain(): IDivisibleByFallbackComputationStrategyChainHandler | null {
+    return this.fallbackChain;
+  }
+
   override interpret(value: number): boolean {
     this.validateOperand(value);
     try {
@@ -57,8 +80,12 @@ export class DivisibleByExpressionImpl extends AbstractBaseFizzBuzzExpression {
         );
         return remainder === 0;
       }
-      const quotient = Math.trunc(truncatedValue / this.divisor);
-      const remainder = truncatedValue - quotient * this.divisor;
+      const fallbackChain = this.resolveFallbackComputationChain();
+      const remainder = fallbackChain.handleFallbackComputation(
+        truncatedValue,
+        this.divisor,
+        DivisibleByExpressionImpl.FALLBACK_COMPUTATION_CONTEXT,
+      );
       return remainder === 0;
     } catch (error) {
       if (error instanceof DivisibilityEvaluationException) {

@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fizzbuzz-enterprise-computation-monitor
+  namespace: fizzbuzz-enterprise
+  labels:
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fizzbuzz-enterprise
+      app.kubernetes.io/component: computation-engine
+  endpoints:
+    - port: computation-metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'fizzbuzz_computation_duration_ms.*'
+          action: keep
+        - sourceLabels: [__name__]
+          regex: 'fizzbuzz_sla_monitor.*'
+          action: keep
+        - sourceLabels: [__name__]
+          regex: 'fizzbuzz_esb_message_count.*'
+          action: keep

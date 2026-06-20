@@ -12,6 +12,11 @@ import {
 } from "./impl/factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
 import { FizzBuzzResolutionFacadeFactoryBeanFactory } from "./impl/factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
 import { DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory } from "./impl/factories/DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.js";
+import { DivisibleByExpressionFallbackComputationStrategyChainFactoryBean } from "./impl/factories/DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.js";
+import { StandardEnterpriseFizzBuzzSlaMonitorImpl } from "./impl/slo/StandardEnterpriseFizzBuzzSlaMonitorImpl.js";
+import { EnterpriseServiceBusChannelImpl } from "./impl/bus/EnterpriseServiceBusChannelImpl.js";
+import { StandardEnterpriseServiceBusMessageRouterImpl } from "./impl/bus/StandardEnterpriseServiceBusMessageRouterImpl.js";
+import { DefaultEnterpriseServiceBusChannelBindingImpl } from "./impl/bus/DefaultEnterpriseServiceBusChannelBindingImpl.js";
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   if (!EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
@@ -22,6 +27,23 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   }
   if (!DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.isEnterpriseSupervisorChainInitialized()) {
     DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.initializeEnterpriseSupervisorChain();
+  }
+  if (!DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.isChainInitialized()) {
+    DivisibleByExpressionFallbackComputationStrategyChainFactoryBean.buildSingletonFallbackComputationChain(true);
+  }
+  {
+    const slaMonitor = new StandardEnterpriseFizzBuzzSlaMonitorImpl(50);
+    const busChannel = new EnterpriseServiceBusChannelImpl("fizzbuzz-computation-channel", "COMPUTATION_EVENT_CHANNEL", true);
+    const busRouter = new StandardEnterpriseServiceBusMessageRouterImpl();
+    busRouter.registerChannel(busChannel);
+    const busBinding = new DefaultEnterpriseServiceBusChannelBindingImpl(busChannel, busRouter);
+    console.debug(
+      `[BootstrapGate] Enterprise infrastructure initialized: ` +
+      `slaMonitor=[${slaMonitor.getMonitorName()} v${slaMonitor.getMonitorVersion()}], ` +
+      `esbChannel=[${busChannel.getChannelName()}], ` +
+      `esbRouter=[${busRouter.getRouterName()} v${busRouter.getRouterVersion()}], ` +
+      `esbBinding=[${busBinding.getBindingName()} v${busBinding.getBindingVersion()}]`,
+    );
   }
   return true;
 })();
