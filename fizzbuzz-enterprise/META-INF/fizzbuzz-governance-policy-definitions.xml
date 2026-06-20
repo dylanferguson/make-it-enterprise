@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+  <description>
+    FizzBuzz Enterprise Edition — Computation Governance Policy Enforcement Bean Definitions.
+    This XML configuration defines the governance enforcement gate decorator chain and
+    policy registry bindings used by the EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.
+  </description>
+
+  <bean id="GovernanceEnforcementGate"
+        class="com.fizzbuzz.enterprise.impl.governance.DefaultComputationGovernancePolicyEnforcementGateImpl"
+        singleton="true"/>
+
+  <bean id="LoggingGovernanceDecorator"
+        class="com.fizzbuzz.enterprise.impl.governance.decorators.LoggingGovernanceEnforcementGateDecoratorImpl"
+        singleton="true">
+    <constructor-arg ref="GovernanceEnforcementGate"/>
+  </bean>
+
+  <bean id="CachingGovernanceDecorator"
+        class="com.fizzbuzz.enterprise.impl.governance.decorators.CachingGovernanceEnforcementGateDecoratorImpl"
+        singleton="true">
+    <constructor-arg ref="LoggingGovernanceDecorator"/>
+  </bean>
+
+  <bean id="AuditTrailGovernanceDecorator"
+        class="com.fizzbuzz.enterprise.impl.governance.decorators.AuditTrailGovernanceEnforcementGateDecoratorImpl"
+        singleton="true">
+    <constructor-arg ref="CachingGovernanceDecorator"/>
+  </bean>
+
+  <bean id="GovernancePolicyRegistry"
+        class="com.fizzbuzz.enterprise.impl.governance.DefaultComputationGovernancePolicyRegistryImpl"
+        singleton="true"/>
+
+  <bean id="FizzBuzzGovernancePolicy"
+        class="com.fizzbuzz.enterprise.impl.governance.DefaultFizzBuzzComputationGovernancePolicyImpl"
+        singleton="true">
+    <constructor-arg value="0"/>
+    <constructor-arg value="65535"/>
+  </bean>
+
+  <bean id="GovernanceValidationVisitor"
+        class="com.fizzbuzz.enterprise.impl.governance.ComputationGovernancePolicyValidationVisitorImpl"
+        singleton="true"/>
+
+  <bean id="EnterpriseGovernanceEnforcementFacade"
+        class="com.fizzbuzz.enterprise.impl.governance.EnterpriseComputationGovernancePolicyEnforcementFacadeImpl"
+        singleton="true">
+    <constructor-arg ref="AuditTrailGovernanceDecorator"/>
+    <constructor-arg ref="GovernancePolicyRegistry"/>
+    <constructor-arg ref="GovernanceValidationVisitor"/>
+  </bean>
+
+</beans>

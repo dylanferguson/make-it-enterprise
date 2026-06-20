@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-enterprise-slo-config
+  namespace: fizzbuzz-enterprise
+data:
+  slo-config.yaml: |
+    slo:
+      computation:
+        target_latency_p99_ms: 80
+        target_success_rate: 0.9999
+        measurement_window_seconds: 300
+      normalization:
+        target_latency_p99_ms: 60
+        target_success_rate: 0.9999
+      evaluation:
+        target_latency_p99_ms: 40
+        target_success_rate: 0.99999
+    alerting:
+      slo_burn_rate_threshold: 2.0
+      alert_window_minutes: 5
+    escalation:
+      severity_pages:
+        - p99_computation_latency > 500ms
+        - success_rate < 0.99
+      severity_tickets:
+        - p99_computation_latency > 200ms
+        - average_computation_latency > 100ms

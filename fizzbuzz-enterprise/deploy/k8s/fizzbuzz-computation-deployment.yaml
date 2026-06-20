@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fizzbuzz-enterprise-computation-service
+  namespace: fizzbuzz-platform
+  labels:
+    app: fizzbuzz
+    tier: computation
+    enterprise-component: fizzbuzz-resolution-mediator
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: fizzbuzz
+      tier: computation
+  template:
+    metadata:
+      labels:
+        app: fizzbuzz
+        tier: computation
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/health"
+        prometheus.io/port: "8080"
+        slo.fizzbuzz.io/sla-target-ms: "50"
+        slo.fizzbuzz.io/compliance-enforcement: "STRICT"
+    spec:
+      serviceAccountName: fizzbuzz-computation-sa
+      containers:
+        - name: fizzbuzz-computation-container
+          image: fizzbuzz-enterprise:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8443
+              name: https
+            - containerPort: 8778
+              name: jmx
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms512m -Xmx2g -server -Dfizzbuzz.resolution.profile=FULLY_DECORATED -Dfizzbuzz.bootstrap.verbose=true"
+            - name: FIZZBUZZ_EMBEDDED_JMS_ENABLED
+              value: "false"
+            - name: FIZZBUZZ_SLA_MONITOR_THRESHOLD_MS
+              value: "50"
+            - name: FIZZBUZZ_GOVERNANCE_PROFILE
+              value: "STANDARD_STRICT"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: fizzbuzz-config
+              mountPath: /etc/fizzbuzz/config
+            - name: fizzbuzz-deployment-descriptors
+              mountPath: /etc/fizzbuzz/deployment
+      volumes:
+        - name: fizzbuzz-config
+          configMap:
+            name: fizzbuzz-computation-config
+        - name: fizzbuzz-deployment-descriptors
+          configMap:
+            name: fizzbuzz-deployment-descriptors
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fizzbuzz-computation-service
+  namespace: fizzbuzz-platform
+  labels:
+    app: fizzbuzz
+    tier: computation
+spec:
+  selector:
+    app: fizzbuzz
+    tier: computation
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8443
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fizzbuzz-computation-hpa
+  namespace: fizzbuzz-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fizzbuzz-enterprise-computation-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-computation-config
+  namespace: fizzbuzz-platform
+data:
+  application.properties: |
+    fizzbuzz.resolution.divisors=3,5,15
+    fizzbuzz.resolution.modulo-evaluation-strategy=delegating-mediation-visitor
+    fizzbuzz.resolution.facade.profile=FULLY_DECORATED
+    fizzbuzz.governance.enforcement.enabled=true
+    fizzbuzz.governance.compliance.level=STRICT
+    fizzbuzz.sla.threshold-ms=50
+    fizzbuzz.jms.provider=embedded-activemq
+    fizzbuzz.bootstrap.gate.enabled=true
+    fizzbuzz.audit-trail.enabled=true
+    fizzbuzz.document-builder.registry.auto-register=true
+    fizzbuzz.enterprise.application-context.name=FizzBuzzEnterpriseApplicationContext
+  fizzbuzz-deployment.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <deployment-plan xmlns="http://fizzbuzz.enterprise/schema/deployment">
+      <entity-beans>
+        <entity-bean>
+          <name>FizzBuzzDivisibilityEvaluationEntityBean</name>
+          <jndi-binding>java:comp/env/ejb/FizzBuzzDivisibilityEvaluation</jndi-binding>
+          <persistence-type>Container</persistence-type>
+          <reentrant>false</reentrant>
+        </entity-bean>
+      </entity-beans>
+      <message-driven-beans>
+        <message-driven-bean>
+          <name>FizzBuzzComputationMDB</name>
+          <jndi-binding>java:comp/env/ejb/FizzBuzzComputationMDB</jndi-binding>
+          <destination-type>javax.jms.Queue</destination-type>
+          <destination-jndi>java:comp/env/jms/FizzBuzzRequestQueue</destination-jndi>
+          <container-transaction-type>Required</container-transaction-type>
+        </message-driven-bean>
+      </message-driven-beans>
+    </deployment-plan>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-deployment-descriptors
+  namespace: fizzbuzz-platform
+data:
+  ejb-jar.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <ejb-jar xmlns="http://java.sun.com/xml/ns/j2ee"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             version="2.1">
+      <enterprise-beans>
+        <session>
+          <ejb-name>FizzBuzzComputationOrchestratorSessionBean</ejb-name>
+          <home>com.fizzbuzz.enterprise.ejb.FizzBuzzComputationOrchestratorHome</home>
+          <remote>com.fizzbuzz.enterprise.ejb.FizzBuzzComputationOrchestrator</remote>
+          <ejb-class>com.fizzbuzz.enterprise.ejb.FizzBuzzComputationOrchestratorSessionBean</ejb-class>
+          <session-type>Stateless</session-type>
+          <transaction-type>Container</transaction-type>
+        </session>
+      </enterprise-beans>
+    </ejb-jar>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+  <description>
+    FizzBuzz Enterprise Edition — Enterprise Divisibility Resolution Facade Bean Definitions
+    This XML configuration defines the bean factory chain for resolving divisibility
+    evaluations through the enterprise modulo chain of responsibility infrastructure.
+    Each IEnterpriseDivisibilityResolutionFacade is constructed with a decorator stack
+    applied in the order specified below.
+  </description>
+
+  <bean id="EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory"
+        class="com.fizzbuzz.enterprise.impl.factories.EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory"
+        singleton="true"
+        init-method="initializeFactory">
+    <property name="configurationProfile" value="FULLY_DECORATED"/>
+    <property name="divisibilityResolutionBeans">
+      <list>
+        <ref bean="ModuloChainDelegatingDivisibilityResolutionFacade"/>
+      </list>
+    </property>
+  </bean>
+
+  <bean id="ModuloChainDelegatingDivisibilityResolutionFacade"
+        class="com.fizzbuzz.enterprise.impl.resolvers.ModuloChainDelegatingEnterpriseDivisibilityResolutionFacadeImpl">
+    <property name="moduloChainHandler" ref="ValidationModuloChainHandler"/>
+  </bean>
+
+  <bean id="CachingDivisibilityResolutionFacadeDecorator"
+        class="com.fizzbuzz.enterprise.impl.decorators.CachingDivisibilityResolutionFacadeDecoratorImpl">
+    <constructor-arg ref="ValidatingDivisibilityResolutionFacadeDecorator"/>
+  </bean>
+
+  <bean id="ValidatingDivisibilityResolutionFacadeDecorator"
+        class="com.fizzbuzz.enterprise.impl.decorators.ValidatingDivisibilityResolutionFacadeDecoratorImpl">
+    <constructor-arg ref="ModuloChainDelegatingDivisibilityResolutionFacade"/>
+  </bean>
+
+  <bean id="AuditTrailDivisibilityResolutionFacadeDecorator"
+        class="com.fizzbuzz.enterprise.impl.decorators.AuditTrailDivisibilityResolutionFacadeDecoratorImpl">
+    <constructor-arg ref="CachingDivisibilityResolutionFacadeDecorator"/>
+  </bean>
+
+  <bean id="CompositeStrategyTreeFactoryBean"
+        class="com.fizzbuzz.enterprise.impl.factories.CompositeStrategyTreeFactoryBeanFactory"
+        singleton="true">
+    <property name="divisibilityFacade" ref="AuditTrailDivisibilityResolutionFacadeDecorator"/>
+  </bean>
+
+</beans>

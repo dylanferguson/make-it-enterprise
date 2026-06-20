@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: execution-coordinator-circuit-breaker-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/name: fizzbuzz-enterprise
+    app.kubernetes.io/component: execution-coordinator
+    app.kubernetes.io/version: "1.0.0"
+data:
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: "5"
+  CIRCUIT_BREAKER_SUCCESS_THRESHOLD: "2"
+  CIRCUIT_BREAKER_TIMEOUT_MS: "10000"
+  EXECUTION_SLO_THRESHOLD_MS: "200"
+  EXECUTION_STRATEGY_SELECTOR_TYPE: "DIVISOR_BASED"
+  EXECUTION_LIFECYCLE_PHASE_VALIDATION_ENABLED: "true"
+  EXECUTION_COORDINATOR_METRICS_EXPORT_ENABLED: "true"
+  EXECUTION_COORDINATOR_CIRCUIT_BREAKER_ENGAGED_ALERT: |
+    Alert: Circuit breaker is OPEN for modular arithmetic execution coordinator.
+    Failure threshold: 5, current failures: {{ .FailureCount }}
+    Last failure: {{ .LastFailureTimestamp }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: execution-coordinator-modulo-strategy-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/name: fizzbuzz-enterprise
+    app.kubernetes.io/component: execution-coordinator
+data:
+  MODULO_THREE_STRATEGY_CLASS: "ModuloThreeExecutionStrategyImpl"
+  MODULO_THREE_STRATEGY_VERSION: "1.0.0-MODULO-THREE-EXECUTION"
+  MODULO_FIVE_STRATEGY_CLASS: "ModuloFiveExecutionStrategyImpl"
+  MODULO_FIVE_STRATEGY_VERSION: "1.0.0-MODULO-FIVE-EXECUTION"
+  MODULO_FIFTEEN_STRATEGY_CLASS: "ModuloFifteenExecutionStrategyImpl"
+  MODULO_FIFTEEN_STRATEGY_VERSION: "1.0.0-MODULO-FIFTEEN-EXECUTION"
+  STRATEGY_SELECTOR_CLASS: "DivisorBasedModularArithmeticExecutionStrategySelectorImpl"
+  STRATEGY_SELECTOR_VERSION: "1.0.0-DIVISOR-BASED-STRATEGY-SELECTOR"

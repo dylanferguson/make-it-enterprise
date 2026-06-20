@@ -1,0 +1,78 @@
+name: Enterprise Specification Pattern CI Pipeline
+
+on:
+  push:
+    branches: [main, develop, 'release/**']
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '24.x'
+  SPECIFICATION_REGISTRY_CAPACITY: 256
+  TEMPLATE_METHOD_AUDIT_TRAIL_ENABLED: true
+
+jobs:
+  specification-registry-validation:
+    name: Specification Registry Validation
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  modulo-command-invocation-verification:
+    name: Modulo Arithmetic Command Invocation Verification
+    runs-on: ubuntu-24.04
+    needs: specification-registry-validation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx vitest run --reporter=verbose
+
+  template-method-audit-trail:
+    name: Template Method Audit Trail Verification
+    runs-on: ubuntu-24.04
+    needs: modulo-command-invocation-verification
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx tsc --project tsconfig.json --noEmit --strict
+
+  adr-compliance-check:
+    name: ADR Compliance Documentation Check
+    runs-on: ubuntu-24.04
+    needs: template-method-audit-trail
+    steps:
+      - uses: actions/checkout@v4
+      - run: test -f adr/ADR-020-specification-pattern-divisibility-evaluation.md
+      - run: test -f adr/ADR-021-modulo-arithmetic-command-invocation.md
+      - run: test -f adr/ADR-022-template-method-resolution-chain-handler.md
+      - run: test -f adr/ADR-023-enterprise-resolution-audit-trail-visitor.md
+      - run: echo "All ADR documents present and accounted for."
+
+  deployment-gate:
+    name: Deployment Gate — All Checks Passed
+    runs-on: ubuntu-24.04
+    needs:
+      - specification-registry-validation
+      - modulo-command-invocation-verification
+      - template-method-audit-trail
+      - adr-compliance-check
+    steps:
+      - run: echo "Enterprise Specification Pattern CI pipeline passed. Deployment gate open."

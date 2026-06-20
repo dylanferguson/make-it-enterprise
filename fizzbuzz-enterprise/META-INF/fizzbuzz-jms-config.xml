@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fizzbuzz-jms-configuration xmlns="urn:fizzbuzz:enterprise:jms:1.0"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            xsi:schemaLocation="urn:fizzbuzz:enterprise:jms:1.0 fizzbuzz-jms-configuration.xsd">
+  <connection-factory>
+    <jndi-name>jms/FizzBuzzConnectionFactory</jndi-name>
+    <client-id>FizzBuzzEnterpriseJmsClient</client-id>
+    <max-connections>10</max-connections>
+    <max-sessions-per-connection>5</max-sessions-per-connection>
+    <connection-timeout-ms>30000</connection-timeout-ms>
+    <reconnect-interval-ms>5000</reconnect-interval-ms>
+  </connection-factory>
+  <destinations>
+    <queue>
+      <name>FizzBuzzComputationRequestQueue</name>
+      <jndi-name>jms/queue/FizzBuzzComputationRequestQueue</jndi-name>
+      <description>Enterprise FizzBuzz Computation Request Queue</description>
+      <delivery-mode>PERSISTENT</delivery-mode>
+      <time-to-live-ms>60000</time-to-live-ms>
+      <max-depth>1000</max-depth>
+      <redelivery-delay-ms>10000</redelivery-delay-ms>
+      <max-redelivery-count>3</max-redelivery-count>
+    </queue>
+    <topic>
+      <name>FizzBuzzComputationResultTopic</name>
+      <jndi-name>jms/topic/FizzBuzzComputationResultTopic</jndi-name>
+      <description>Enterprise FizzBuzz Computation Result Notification Topic</description>
+      <delivery-mode>NON_PERSISTENT</delivery-mode>
+      <time-to-live-ms>30000</time-to-live-ms>
+      <durable-subscription>true</durable-subscription>
+    </topic>
+  </destinations>
+  <message-driven-beans>
+    <mdb>
+      <ejb-name>FizzBuzzComputationMDB</ejb-name>
+      <jndi-name>ejb/FizzBuzzComputationMDB</jndi-name>
+      <destination-jndi>jms/queue/FizzBuzzComputationRequestQueue</destination-jndi>
+      <destination-type>javax.jms.Queue</destination-type>
+      <connection-factory-jndi>jms/FizzBuzzConnectionFactory</connection-factory-jndi>
+      <message-selector>FizzBuzzComputationMessageType IS NOT NULL</message-selector>
+      <acknowledge-mode>AUTO_ACKNOWLEDGE</acknowledge-mode>
+      <transacted>true</transacted>
+      <transaction-attribute>Required</transaction-attribute>
+      <activation-config>
+        <property>
+          <name>destinationIdentifier</name>
+          <value>FizzBuzzComputationRequestQueue</value>
+        </property>
+        <property>
+          <name>subscriptionDurability</name>
+          <value>NonDurable</value>
+        </property>
+        <property>
+          <name>acknowledgeMode</name>
+          <value>Auto-acknowledge</value>
+        </property>
+      </activation-config>
+    </mdb>
+  </message-driven-beans>
+  <jndi-bindings>
+    <binding>
+      <name>jms/FizzBuzzConnectionFactory</name>
+      <type>javax.jms.ConnectionFactory</type>
+      <ref>FizzBuzzConnectionFactory</ref>
+    </binding>
+    <binding>
+      <name>jms/queue/FizzBuzzComputationRequestQueue</name>
+      <type>javax.jms.Queue</type>
+      <ref>FizzBuzzComputationRequestQueue</ref>
+    </binding>
+    <binding>
+      <name>jms/topic/FizzBuzzComputationResultTopic</name>
+      <type>javax.jms.Topic</type>
+      <ref>FizzBuzzComputationResultTopic</ref>
+    </binding>
+  </jndi-bindings>
+</fizzbuzz-jms-configuration>

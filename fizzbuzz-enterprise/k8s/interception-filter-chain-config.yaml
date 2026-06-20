@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: interception-filter-chain-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/name: fizzbuzz-enterprise
+    app.kubernetes.io/component: interception-filter-chain
+    app.kubernetes.io/part-of: fizzbuzz
+data:
+  INTERCEPTION_FILTER_CHAIN_ENABLED: "true"
+  INTERCEPTION_FILTER_CHAIN_PROFILE: "STANDARD"
+  INTERCEPTION_FILTER_CHAIN_DECORATOR_PROFILE: "ENABLED_STANDARD"
+  FILTER_REQUEST_VALIDATION_ENABLED: "true"
+  FILTER_REQUEST_VALIDATION_MAX_VALUE: "1000000000"
+  FILTER_REQUEST_METRICS_ENABLED: "true"
+  FILTER_REQUEST_AUDITING_ENABLED: "true"
+  FILTER_THREADLOCAL_CONTEXT_ENABLED: "true"
+  FILTER_CHAIN_TIMEOUT_MS: "10000"

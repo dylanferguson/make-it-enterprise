@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fizzbuzz-enterprise-edition
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    tier: enterprise
+    version: "2.0.0"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: fizzbuzz
+  template:
+    metadata:
+      labels:
+        app: fizzbuzz
+        tier: enterprise
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+    spec:
+      serviceAccountName: fizzbuzz-service-account
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: fizzbuzz
+          image: fizzbuzz-enterprise-edition:2.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http-api
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: FIZZBUZZ_CACHE_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_SESSION_MANAGEMENT_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_AUDIT_TRAIL_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_APPLICATION_VERSION
+              value: "2.0.0"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_CACHING_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_AUDIT_TRAIL_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_MAX_CACHE_SIZE
+              value: "1000"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http-api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http-api
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /startupz
+              port: http-api
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fizzbuzz-enterprise-edition
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    tier: enterprise
+spec:
+  type: ClusterIP
+  selector:
+    app: fizzbuzz
+  ports:
+    - name: http-api
+      port: 80
+      targetPort: http-api
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fizzbuzz-enterprise-edition
+  namespace: fizzbuzz-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fizzbuzz-enterprise-edition
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

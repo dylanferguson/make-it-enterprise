@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-computation-policy-config
+  namespace: fizzbuzz-enterprise
+  labels:
+    app.kubernetes.io/name: fizzbuzz-enterprise
+    app.kubernetes.io/component: policy-decision-point
+data:
+  FIZZBUZZ_POLICY_ENFORCEMENT_ENABLED: "true"
+  FIZZBUZZ_POLICY_MAX_COMPUTATION_VALUE: "2147483647"
+  FIZZBUZZ_POLICY_DECISION_POINT_NAME: "FizzBuzzComputationPolicyDecisionPoint"
+  FIZZBUZZ_POLICY_CONSTRAINT_VALIDATION_ENABLED: "true"
+  FIZZBUZZ_POLICY_LOG_VIOLATIONS: "true"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fizzbuzz-policy-decision-point-pdb
+  namespace: fizzbuzz-enterprise
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: policy-decision-point
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fizzbuzz-policy-decision-point-network-policy
+  namespace: fizzbuzz-enterprise
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: policy-decision-point
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: fizzbuzz-enterprise-service
+      ports:
+        - protocol: TCP
+          port: 8443
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: fizzbuzz-enterprise-service
+      ports:
+        - protocol: TCP
+          port: 8443

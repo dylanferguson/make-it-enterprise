@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-evaluation-chain-config
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    component: evaluation-chain
+    version: "2.0.0"
+data:
+  modulo-chain-validation-enabled: "true"
+  modulo-chain-caching-enabled: "true"
+  modulo-chain-audit-enabled: "true"
+  modulo-chain-max-cache-size: "128"
+  modulo-chain-cache-eviction-policy: "LRU"
+  modulo-chain-default-strategy: "NATIVE_OPERATOR"
+  modulo-chain-fallback-strategy: "SUBTRACTION_LOOP"
+  modulo-chain-operation-timeout-ms: "100"
+  modulo-chain-retry-count: "2"
+  modulo-chain-retry-backoff-ms: "5"
+  modulo-chain-leader-election-enabled: "true"

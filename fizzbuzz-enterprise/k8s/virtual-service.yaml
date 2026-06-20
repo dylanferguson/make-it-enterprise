@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: fizzbuzz-enterprise-computation-routing
+  namespace: fizzbuzz-enterprise
+spec:
+  hosts:
+    - fizzbuzz-computation.fizzbuzz-enterprise.svc.cluster.local
+  http:
+    - match:
+        - uri:
+            prefix: /compute
+      route:
+        - destination:
+            host: fizzbuzz-enterprise-computation-service
+            port:
+              number: 8080
+          weight: 95
+        - destination:
+            host: fizzbuzz-enterprise-computation-service-canary
+            port:
+              number: 8080
+          weight: 5
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+      timeout: 5s
+    - match:
+        - uri:
+            prefix: /normalize
+      route:
+        - destination:
+            host: fizzbuzz-enterprise-normalization-service
+            port:
+              number: 8080
+      timeout: 3s

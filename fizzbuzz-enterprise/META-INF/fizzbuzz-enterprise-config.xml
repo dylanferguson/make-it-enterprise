@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fizzbuzz-enterprise-configuration SYSTEM "fizzbuzz-enterprise-configuration.dtd">
+<fizzbuzz-enterprise-configuration
+  xmlns="http://com.enterprise.fizzbuzz/schema/enterprise-configuration"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://com.enterprise.fizzbuzz/schema/enterprise-configuration fizzbuzz-enterprise-configuration.xsd"
+  schema-version="1.0.0"
+  application-name="FizzBuzzEnterpriseApplication"
+  application-version="15.0.0">
+
+  <property-list>
+    <property name="mediation.enabled" value="true" type="boolean"/>
+    <property name="auditing.enabled" value="true" type="boolean"/>
+    <property name="performance.monitoring.enabled" value="true" type="boolean"/>
+    <property name="validation.enabled" value="true" type="boolean"/>
+    <property name="metrics.collection.enabled" value="true" type="boolean"/>
+    <property name="decorator.configuration.aware.enabled" value="true" type="boolean"/>
+    <property name="decorator.validation.aware.enabled" value="true" type="boolean"/>
+    <property name="decorator.interception.filter.enabled" value="true" type="boolean"/>
+    <property name="decorator.document.aware.enabled" value="true" type="boolean"/>
+    <property name="decorator.aop.aware.enabled" value="true" type="boolean"/>
+    <property name="decorator.pre.evaluation.enabled" value="true" type="boolean"/>
+    <property name="decorator.state.machine.enabled" value="true" type="boolean"/>
+    <property name="decorator.transaction.enabled" value="true" type="boolean"/>
+    <property name="decorator.abstract.divisibility.enabled" value="true" type="boolean"/>
+    <property name="decorator.jndi.ejb.enabled" value="true" type="boolean"/>
+    <property name="decorator.post.processor.enabled" value="true" type="boolean"/>
+    <property name="decorator.strategy.lookup.enabled" value="true" type="boolean"/>
+    <property name="decorator.orchestration.mediation.enabled" value="true" type="boolean"/>
+  </property-list>
+
+  <decorator-chain>
+    <decorator name="ConfigurationAware" enabled="true"/>
+    <decorator name="ValidationAware" enabled="true"/>
+    <decorator name="InterceptionFilter" enabled="true"/>
+    <decorator name="DocumentAware" enabled="true"/>
+    <decorator name="AopAware" enabled="true"/>
+    <decorator name="PreEvaluation" enabled="true"/>
+    <decorator name="StateMachine" enabled="true"/>
+    <decorator name="Transaction" enabled="true"/>
+    <decorator name="AbstractDivisibility" enabled="true"/>
+    <decorator name="JndiEjb" enabled="true"/>
+    <decorator name="PostProcessor" enabled="true"/>
+    <decorator name="StrategyLookupService" enabled="true"/>
+    <decorator name="OrchestrationMediation" enabled="true"/>
+  </decorator-chain>
+
+  <mediation-configuration>
+    <handler name="AuditingHandler" enabled="true" priority="100"/>
+    <handler name="PerformanceMonitoringHandler" enabled="true" priority="200"/>
+    <handler name="ValidationHandler" enabled="true" priority="300"/>
+    <handler name="MetricCollectionHandler" enabled="true" priority="400"/>
+  </mediation-configuration>
+</fizzbuzz-enterprise-configuration>

@@ -1,0 +1,2 @@
+export { EnterpriseClassificationStrategyProviderFactoryBeanFactory } from "./EnterpriseClassificationStrategyProviderFactoryBeanFactory.js";
+export { EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
