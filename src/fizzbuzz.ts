@@ -71,6 +71,13 @@ import { TemplateMethodResolutionChainHandlerFactoryBeanFactory } from "./templa
 import { EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory } from "./visitortrail/factories/EnterpriseFizzBuzzResolutionAuditTrailVisitorFactoryBeanFactory.js";
 import type { IEnterpriseFizzBuzzResolutionAuditTrailVisitor } from "./visitortrail/contracts/IEnterpriseFizzBuzzResolutionAuditTrailVisitor.js";
 import type { IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler } from "./templatemethod/contracts/IEnterpriseFizzBuzzTemplateMethodResolutionChainHandler.js";
+import { FizzBuzzRangeItemReaderFactoryBeanFactory } from "./batch/factories/FizzBuzzRangeItemReaderFactoryBeanFactory.js";
+import { FizzBuzzSingleValueItemProcessorFactoryBeanFactory } from "./batch/factories/FizzBuzzSingleValueItemProcessorFactoryBeanFactory.js";
+import { FizzBuzzResultItemWriterFactoryBeanFactory } from "./batch/factories/FizzBuzzResultItemWriterFactoryBeanFactory.js";
+import { FizzBuzzBatchJobConfigurationFactoryBeanFactory } from "./batch/factories/FizzBuzzBatchJobConfigurationFactoryBeanFactory.js";
+import { FizzBuzzBatchJobExecutionMonitorFactoryBeanFactory } from "./batch/factories/FizzBuzzBatchJobExecutionMonitorFactoryBeanFactory.js";
+import { FizzBuzzBatchChunkOrientedJobFactoryBeanFactory } from "./batch/factories/FizzBuzzBatchChunkOrientedJobFactoryBeanFactory.js";
+import type { IBatchChunkOrientedJob } from "./batch/contracts/index.js";
 import { FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory } from "./impl/chains/resolution/factories/FizzBuzzResolutionStrategyChainOfResponsibilityFactoryBeanFactory.js";
 import type { IFizzBuzzResolutionStrategyChainOfResponsibilityManager } from "./contracts/IFizzBuzzResolutionStrategyChainOfResponsibilityManager.js";
 import type { IEnterpriseFizzBuzzResolutionStrategySelectorVisitor } from "./contracts/IEnterpriseFizzBuzzResolutionStrategySelectorVisitor.js";
@@ -321,6 +328,19 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `default locale=${new DefaultLocaleResolutionStrategyImpl().resolveLocale()}`,
       );
     }
+  }
+  {
+    const writer = FizzBuzzResultItemWriterFactoryBeanFactory.createWriter();
+    const config = FizzBuzzBatchJobConfigurationFactoryBeanFactory.createConfiguration();
+    const monitor = FizzBuzzBatchJobExecutionMonitorFactoryBeanFactory.createMonitor();
+    console.debug(
+      `[BatchInfrastructure] Enterprise chunk-oriented batch processing infrastructure initialized: ` +
+      `writer=[${writer.getWriterName()} v${writer.getWriterVersion()}], ` +
+      `configuration=[${config.getConfigurationName()} v${config.getConfigurationVersion()}], ` +
+      `monitor=[${monitor.getMonitorName()} v${monitor.getMonitorVersion()}], ` +
+      `chunkSize=[${config.getChunkSize()}], ` +
+      `jobInstance=[${config.getJobInstanceName()}]`,
+    );
   }
   return true;
 })();
@@ -586,12 +606,39 @@ function resolveBusinessDelegateServiceLocatorProxy(): IServiceLocatorManagedBus
   return businessDelegateServiceLocatorProxy!;
 }
 
+let batchChunkOrientedJob: IBatchChunkOrientedJob<number, string> | null = null;
+
+function resolveBatchChunkOrientedJob(
+  start: number,
+  end: number,
+): IBatchChunkOrientedJob<number, string> {
+  if (batchChunkOrientedJob === null) {
+    const reader = FizzBuzzRangeItemReaderFactoryBeanFactory.createReader(start, end);
+    const singleValueResolver = (value: number): string => {
+      const delegate = resolveEnterpriseBusinessDelegate();
+      return delegate.delegateSingleValueResolution(value);
+    };
+    const processor = FizzBuzzSingleValueItemProcessorFactoryBeanFactory.createProcessor(singleValueResolver);
+    const writer = FizzBuzzResultItemWriterFactoryBeanFactory.createWriter();
+    const configuration = FizzBuzzBatchJobConfigurationFactoryBeanFactory.createConfiguration();
+    const monitor = FizzBuzzBatchJobExecutionMonitorFactoryBeanFactory.createMonitor();
+    batchChunkOrientedJob = FizzBuzzBatchChunkOrientedJobFactoryBeanFactory.createJob(
+      reader,
+      processor,
+      writer,
+      configuration,
+      monitor,
+    );
+  }
+  return batchChunkOrientedJob;
+}
+
 export function fizzBuzzValue(value: number): string {
   const delegate = resolveEnterpriseBusinessDelegate();
   return delegate.delegateSingleValueResolution(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const delegate = resolveEnterpriseBusinessDelegate();
-  return delegate.delegateRangeResolution(start, end);
+  const batchJob = resolveBatchChunkOrientedJob(start, end);
+  return batchJob.execute();
 }
