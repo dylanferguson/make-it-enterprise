@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fizzbuzz-output-normalization-config
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    component: output-normalization
+    version: "1.0.0"
+data:
+  normalization-profile: "STANDARD"
+  normalization-pipeline-factory-bean-version: "1.0.0-FACTORY-BEAN"
+  normalization-pipeline-version: "1.0.0-NORMALIZATION-PIPELINE"
+  result-non-empty-validation-enabled: "true"
+  result-canonicalization-enabled: "true"
+  result-format-verification-enabled: "false"
+  result-slo-metrics-collection-enabled: "true"
+  slo-normalization-alert-threshold-ms: "5"

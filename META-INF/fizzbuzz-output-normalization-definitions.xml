@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+  <description>
+    FizzBuzz Enterprise Edition — Output Normalization Pipeline Bean Definitions
+    This XML configuration defines the chain of normalization stages that process
+    every FizzBuzz computation result before it is returned to the consumer. Each
+    stage is registered as a singleton bean in the output normalization pipeline
+    manager facade.
+  </description>
+
+  <bean id="EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean"
+        class="com.fizzbuzz.enterprise.impl.factories.EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean"
+        singleton="true"/>
+
+  <bean id="EnterpriseFizzBuzzOutputNormalizationPipelineManagerFacade"
+        class="com.fizzbuzz.enterprise.impl.normalization.EnterpriseFizzBuzzOutputNormalizationPipelineManagerFacadeImpl"
+        singleton="true"/>
+
+  <bean id="StandardEnterpriseFizzBuzzOutputNormalizationPipelineFactory"
+        class="com.fizzbuzz.enterprise.impl.normalization.StandardEnterpriseFizzBuzzOutputNormalizationPipelineFactoryImpl"
+        singleton="true">
+    <constructor-arg name="profile" value="STANDARD"/>
+  </bean>
+
+  <bean id="StandardEnterpriseFizzBuzzOutputNormalizationPipelineConfigurator"
+        class="com.fizzbuzz.enterprise.impl.normalization.StandardEnterpriseFizzBuzzOutputNormalizationPipelineConfiguratorImpl"
+        singleton="true"/>
+
+  <bean id="EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStage"
+        class="com.fizzbuzz.enterprise.impl.normalization.EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStageImpl"
+        singleton="true"/>
+
+  <bean id="EnterpriseFizzBuzzResultCanonicalizationNormalizationStage"
+        class="com.fizzbuzz.enterprise.impl.normalization.EnterpriseFizzBuzzResultCanonicalizationNormalizationStageImpl"
+        singleton="true"/>
+
+  <bean id="EnterpriseFizzBuzzResultFormatVerificationNormalizationStage"
+        class="com.fizzbuzz.enterprise.impl.normalization.EnterpriseFizzBuzzResultFormatVerificationNormalizationStageImpl"
+        singleton="true"/>
+
+  <bean id="EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStage"
+        class="com.fizzbuzz.enterprise.impl.normalization.EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl"
+        singleton="true"/>
+
+</beans>

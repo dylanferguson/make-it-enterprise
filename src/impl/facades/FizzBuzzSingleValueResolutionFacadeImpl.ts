@@ -8,6 +8,8 @@ import type { IFizzBuzzComputationRequestBuilder } from "../../contracts/IFizzBu
 import type { IFizzBuzzServiceDelegate } from "../../contracts/IFizzBuzzServiceDelegate.js";
 import type { IFizzBuzzComputationRequest } from "../../contracts/IFizzBuzzComputationRequest.js";
 import type { IFizzBuzzComputationResponse } from "../../contracts/IFizzBuzzComputationResponse.js";
+import type { IEnterpriseFizzBuzzOutputNormalizationPipeline } from "../../contracts/IEnterpriseFizzBuzzOutputNormalizationPipeline.js";
+import { EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean } from "../factories/EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.js";
 
 export class FizzBuzzSingleValueResolutionFacadeImpl
   extends AbstractBaseFizzBuzzSingleValueResolutionFacade
@@ -22,6 +24,7 @@ export class FizzBuzzSingleValueResolutionFacadeImpl
   private readonly commandInvoker: IFizzBuzzCommandInvoker;
   private readonly computationCommand: IFizzBuzzComputationCommand;
   private readonly computationTemplate: IFizzBuzzComputationTemplate;
+  private normalizationPipeline: IEnterpriseFizzBuzzOutputNormalizationPipeline | null = null;
 
   constructor(
     requestBuilder: IFizzBuzzComputationRequestBuilder,
@@ -43,7 +46,8 @@ export class FizzBuzzSingleValueResolutionFacadeImpl
       this.computationCommand,
       request,
     );
-    return response.getComputedResult();
+    const rawResult = response.getComputedResult();
+    return this.normalizeComputationResult(rawResult, value, response.getResponseId());
   }
 
   override resolveRange(start: number, end: number): readonly string[] {
@@ -55,7 +59,8 @@ export class FizzBuzzSingleValueResolutionFacadeImpl
         this.computationCommand,
         request,
       );
-      responses.push(response.getComputedResult());
+      const rawResult = response.getComputedResult();
+      responses.push(this.normalizeComputationResult(rawResult, i, response.getResponseId()));
     }
     return responses;
   }
@@ -82,6 +87,23 @@ export class FizzBuzzSingleValueResolutionFacadeImpl
 
   getComputationTemplate(): IFizzBuzzComputationTemplate {
     return this.computationTemplate;
+  }
+
+  private resolveNormalizationPipeline(): IEnterpriseFizzBuzzOutputNormalizationPipeline {
+    if (this.normalizationPipeline === null) {
+      this.normalizationPipeline =
+        EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.createPipeline();
+    }
+    return this.normalizationPipeline;
+  }
+
+  private normalizeComputationResult(
+    rawResult: string,
+    computationValue: number,
+    contextId: string,
+  ): string {
+    const pipeline = this.resolveNormalizationPipeline();
+    return pipeline.execute(rawResult, computationValue, contextId);
   }
 
   private buildResolutionRequest(value: number): IFizzBuzzComputationRequest {

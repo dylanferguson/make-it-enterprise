@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fizzbuzz-enterprise-ingress
+  namespace: fizzbuzz-system
+  annotations:
+    nginx.ingress.kubernetes.io/rate-limit: "100/s"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "200"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://fizzbuzz-enterprise.internal"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-FizzBuzz-Enterprise-Edition: 2.0.0";
+      more_set_headers "X-Architecture-Decision-Record: https://adr.internal/ADR-001";
+  labels:
+    app: fizzbuzz
+    tier: enterprise
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - fizzbuzz-enterprise.internal
+      secretName: fizzbuzz-tls-secret
+  rules:
+    - host: fizzbuzz-enterprise.internal
+      http:
+        paths:
+          - path: /api/v1/fizzbuzz
+            pathType: Prefix
+            backend:
+              service:
+                name: fizzbuzz-enterprise-edition
+                port:
+                  name: http-api
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: fizzbuzz-enterprise-edition
+                port:
+                  name: metrics
+          - path: /healthz
+            pathType: Exact
+            backend:
+              service:
+                name: fizzbuzz-enterprise-edition
+                port:
+                  name: http-api

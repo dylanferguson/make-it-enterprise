@@ -1,0 +1,15 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fizzbuzz-critical-pdb
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    tier: enterprise
+    criticality: high
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: fizzbuzz
+      criticality: high

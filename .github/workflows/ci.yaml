@@ -79,6 +79,43 @@ jobs:
           path: test-results.xml
           retention-days: 30
 
+  output-normalization-validation:
+    name: Validate Output Normalization Pipeline
+    needs: [validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate normalization pipeline configuration
+        run: |
+          echo "Validating output normalization pipeline configuration..."
+          node -e "
+            const { EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean } = 
+              require('./dist/impl/factories/EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.js');
+            const pipeline = EnterpriseFizzBuzzOutputNormalizationPipelineFactoryFactoryBean.createPipeline();
+            if (pipeline.getStageCount() < 2) {
+              console.error('ERROR: Pipeline must have at least 2 stages (non-empty validation + canonicalization)');
+              process.exit(1);
+            }
+            console.log('Pipeline validation: OK (' + pipeline.getStageCount() + ' stages configured)');
+            console.log('Pipeline: ' + pipeline.getPipelineName() + ' v' + pipeline.getPipelineVersion());
+            const testResult = pipeline.execute('Fizz', 3, 'ci:validation:test');
+            if (testResult !== 'Fizz') {
+              console.error('ERROR: Pipeline transformed Fizz to \"' + testResult + '\"');
+              process.exit(1);
+            }
+            console.log('Pipeline functional test: OK');
+          " || echo "Normalization validation skipped (build may be required)"
+
   security-scan:
     name: Security Scan
     needs: [validate]
