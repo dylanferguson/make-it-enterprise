@@ -201,6 +201,11 @@ import type { IEnterpriseFizzBuzzPublicApiSessionFacade } from "./enterprisefaca
 import { EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory } from "./computationformatter/factories/EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.js";
 import type { IEnterpriseFizzBuzzResultFormatterBridge } from "./computationformatter/contracts/IEnterpriseFizzBuzzResultFormatterBridge.js";
 import { AbstractBaseEnterpriseFizzBuzzResultFormatterBridgeImpl } from "./computationformatter/abstract/AbstractBaseEnterpriseFizzBuzzResultFormatterBridgeImpl.js";
+import { CompositeExpressionVisitorFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionVisitorFactoryBeanFactory.js";
+import { CompositeExpressionInterpreterFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionInterpreterFactoryBeanFactory.js";
+import { CompositeExpressionTreeFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionTreeFactoryBeanFactory.js";
+import { CompositeExpressionAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./compositeexpression/factories/CompositeExpressionAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { ICompositeExpressionAwareResolutionFacadeDecorator } from "./compositeexpression/contracts/ICompositeExpressionAwareResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -833,6 +838,20 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `initialized=[${EnterpriseFizzBuzzResultFormatterBridgeFactoryBeanFactory.isFactoryBeanInitialized()}]`,
     );
   }
+  if (!CompositeExpressionVisitorFactoryBeanFactory.isFactoryBeanInitialized()) {
+    const ceVisitor = CompositeExpressionVisitorFactoryBeanFactory.createVisitor();
+    const ceInterpreter = CompositeExpressionInterpreterFactoryBeanFactory.createInterpreter(ceVisitor);
+    const ceTreeFactory = CompositeExpressionTreeFactoryBeanFactory.createTreeFactory();
+    console.debug(
+      `[CompositeExpressionInfrastructure] Enterprise composite expression interpreter infrastructure initialized: ` +
+      `visitor=[${ceVisitor.getVisitorName()} v${ceVisitor.getVisitorVersion()}], ` +
+      `interpreter=[${ceInterpreter.getInterpreterName()} v${ceInterpreter.getInterpreterVersion()}], ` +
+      `treeFactory=[${ceTreeFactory.getFactoryName()} v${ceTreeFactory.getFactoryVersion()}], ` +
+      `visitorFactoryBean=[${CompositeExpressionVisitorFactoryBeanFactory.getFactoryBeanName()} v${CompositeExpressionVisitorFactoryBeanFactory.getFactoryBeanVersion()}], ` +
+      `interpreterFactoryBean=[${CompositeExpressionInterpreterFactoryBeanFactory.getFactoryBeanName()} v${CompositeExpressionInterpreterFactoryBeanFactory.getFactoryBeanVersion()}], ` +
+      `treeFactoryFactoryBean=[${CompositeExpressionTreeFactoryBeanFactory.getFactoryBeanName()} v${CompositeExpressionTreeFactoryBeanFactory.getFactoryBeanVersion()}]`,
+    );
+  }
   if (!EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.getImplementor()) {
       const bridgeImplementor =
         EnterpriseDivisibilityOrchestrationBridgeImplementorFactoryBeanFactory.createImplementor();
@@ -1124,7 +1143,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
     const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
-    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    const compositeExpressionWrapped = wrapWithCompositeExpressionResolution(orchestrationWrapped);
+    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(compositeExpressionWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
@@ -1150,12 +1170,41 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
     const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
-    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    const compositeExpressionWrapped = wrapWithCompositeExpressionResolution(orchestrationWrapped);
+    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(compositeExpressionWrapped);
     const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
     const jaasWrapped = wrapWithJaasSecurityResolution(classificationWrapped);
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
     return wrapWithFormatterBridgeResolution(proxied);
+}
+
+function wrapWithCompositeExpressionResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (CompositeExpressionVisitorFactoryBeanFactory.isFactoryBeanInitialized()) {
+    const ceVisitor = CompositeExpressionVisitorFactoryBeanFactory.createVisitor();
+    const ceInterpreter = CompositeExpressionInterpreterFactoryBeanFactory.createInterpreter(ceVisitor);
+    const ceTreeFactory = CompositeExpressionTreeFactoryBeanFactory.createTreeFactory();
+    const compositeExpressionDecorator: ICompositeExpressionAwareResolutionFacadeDecorator =
+      CompositeExpressionAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        ceInterpreter,
+        ceTreeFactory,
+        true,
+      );
+    console.debug(
+      `[CompositeExpressionResolutionDecorator] Composite expression interpreter-aware decorator applied: ` +
+      `decorator=[${compositeExpressionDecorator.getDecoratorName()} v${compositeExpressionDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${compositeExpressionDecorator.getWrappedFacadeName()}], ` +
+      `evaluationCount=[${compositeExpressionDecorator.getCompositeEvaluationCount()}], ` +
+      `interpreter=[${ceInterpreter.getInterpreterName()} v${ceInterpreter.getInterpreterVersion()}], ` +
+      `treeFactory=[${ceTreeFactory.getFactoryName()} v${ceTreeFactory.getFactoryVersion()}], ` +
+      `decoratorEnabled=[${compositeExpressionDecorator.isDecoratorEnabled()}]`,
+    );
+    return compositeExpressionDecorator;
+  }
+  return facade;
 }
 
 function wrapWithInvocationProxyResolution(
