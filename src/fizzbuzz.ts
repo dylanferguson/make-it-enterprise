@@ -46,8 +46,10 @@ import {
   DirectiveResolutionMediationOrchestratorConfigurationProfile,
 } from "./impl/factories/EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.js";
 import type { IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator } from "./contracts/IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator.js";
+import { JmsInfrastructureFactoryBeanFactory } from "./impl/jms/factories/JmsInfrastructureFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
+let jmsInfrastructureInitialized = false;
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   let deploymentDecorator: IEnterpriseDeploymentAwareBootstrapDecorator | null = null;
@@ -173,6 +175,30 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `layerIds=[${protocolStack.getRegisteredLayers().map((l) => `L${l.getLayerNumber()}:${l.getLayerIdentifier()}`).join(", ")}]`,
     );
   }
+  if (!jmsInfrastructureInitialized) {
+    const context = FizzBuzzEnterpriseApplicationContextFactoryBean.getApplicationContext();
+    if (context !== null && context.isInitialized()) {
+      const namingContext = (context as any).getNamingContext?.() ?? context as any;
+      const jmsInitialized = JmsInfrastructureFactoryBeanFactory.initializeJmsInfrastructure(namingContext);
+      if (jmsInitialized) {
+        const cf = JmsInfrastructureFactoryBeanFactory.getConnectionFactory();
+        const queue = JmsInfrastructureFactoryBeanFactory.getRequestQueue();
+        const topic = JmsInfrastructureFactoryBeanFactory.getResultTopic();
+        const mdbContainer = JmsInfrastructureFactoryBeanFactory.getMdbContainer();
+        const binder = JmsInfrastructureFactoryBeanFactory.getAdministeredObjectBinder();
+        console.debug(
+          `[JmsInfrastructure] Enterprise JMS messaging infrastructure initialized: ` +
+          `connectionFactory=[${cf?.getConnectionFactoryName() ?? "N/A"} v${cf?.getConnectionFactoryVersion() ?? "N/A"}], ` +
+          `requestQueue=[${queue?.getDestinationName() ?? "N/A"}@${queue?.getJndiName() ?? "N/A"}], ` +
+          `resultTopic=[${topic?.getDestinationName() ?? "N/A"}@${topic?.getJndiName() ?? "N/A"}], ` +
+          `mdbContainer=[${mdbContainer?.getContainerName() ?? "N/A"} v${mdbContainer?.getContainerVersion() ?? "N/A"}], ` +
+          `deployedBeans=[${mdbContainer?.getDeployedBeanCount() ?? 0}], ` +
+          `binder=[${binder?.getBinderName() ?? "N/A"} v${binder?.getBinderVersion() ?? "N/A"}]`,
+        );
+        jmsInfrastructureInitialized = true;
+      }
+    }
+  }
   return true;
 })();
 
@@ -235,7 +261,17 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   return configurationAwareDecorator;
 }
 
+let mdbCallbackRegistered = false;
+
 function resolveInnerSingleValue(value: number): string {
+  if (!mdbCallbackRegistered && JmsInfrastructureFactoryBeanFactory.isInitialized()) {
+    JmsInfrastructureFactoryBeanFactory.setMdbComputationCallback((v: number) => {
+      const governanceFacade = resolveGovernanceEnforcementFacade();
+      const facade = resolveResolutionFacade();
+      return governanceFacade.enforceComputation(v, (w: number) => facade.resolveValue(w));
+    });
+    mdbCallbackRegistered = true;
+  }
   const governanceFacade = resolveGovernanceEnforcementFacade();
   const facade = resolveResolutionFacade();
   return governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
