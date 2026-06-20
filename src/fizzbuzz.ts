@@ -47,6 +47,10 @@ import {
 } from "./impl/factories/EnterpriseFizzBuzzDirectiveResolutionMediationOrchestratorFactoryBeanFactory.js";
 import type { IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator } from "./contracts/IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator.js";
 import { JmsInfrastructureFactoryBeanFactory } from "./impl/jms/factories/JmsInfrastructureFactoryBeanFactory.js";
+import { StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory } from "./builders/factories/StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.js";
+import { StandardFizzBuzzRangeIteratorFactoryBeanFactory } from "./iterators/factories/StandardFizzBuzzRangeIteratorFactoryBeanFactory.js";
+import type { IFizzBuzzComputationPipelineProduct } from "./builders/contracts/IFizzBuzzComputationPipelineBuilder.js";
+import type { IFizzBuzzRangeIterator } from "./iterators/contracts/IFizzBuzzRangeIterator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -204,6 +208,47 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
 
 let governanceEnforcementFacade: IEnterpriseComputationGovernancePolicyEnforcementFacade | null = null;
 let mediationOrchestrator: IEnterpriseFizzBuzzDirectiveResolutionMediationOrchestrator | null = null;
+let builderPipelineProduct: IFizzBuzzComputationPipelineProduct | null = null;
+let iteratorBasedComputationInitialized = false;
+
+function initializeIteratorBasedComputationPipeline(): void {
+  if (iteratorBasedComputationInitialized) return;
+
+  const governanceEnforcer = (value: number, inner: (v: number) => string): string => {
+    const facade = resolveGovernanceEnforcementFacade();
+    return facade.enforceComputation(value, inner);
+  };
+
+  const orchestrator = resolveMediationOrchestrator();
+  const facade = resolveResolutionFacade();
+
+  const builder = StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.createBuilder(false);
+  builder
+    .withGovernanceEnforcement(governanceEnforcer)
+    .withMediationOrchestrator(orchestrator)
+    .withResolutionFacade(facade)
+    .withConfigurationProfile("ENTERPRISE_ITERATOR_BASED")
+    .withSlaThreshold(50)
+    .withCacheEnabled(true);
+
+  builderPipelineProduct = StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.buildProduct(builder);
+
+  const iterator = StandardFizzBuzzRangeIteratorFactoryBeanFactory.createIterator(
+    1, 100,
+    (v: number) => builderPipelineProduct!.resolveSingleValue(v),
+    false,
+  );
+
+  console.debug(
+    `[IteratorBasedComputationPipeline] Pipeline product initialized: ` +
+    `product=[${builderPipelineProduct.getProductName()} v${builderPipelineProduct.getProductVersion()}], ` +
+    `profile=[${builderPipelineProduct.getPipelineConfigurationProfile()}], ` +
+    `iterator=[${iterator.getIteratorName()} v${iterator.getIteratorVersion()}], ` +
+    `diagnostics=[${JSON.stringify(builderPipelineProduct.getDiagnosticSummary())}]`,
+  );
+
+  iteratorBasedComputationInitialized = true;
+}
 
 function resolveGovernanceEnforcementFacade(): IEnterpriseComputationGovernancePolicyEnforcementFacade {
   if (governanceEnforcementFacade === null) {
@@ -277,12 +322,30 @@ function resolveInnerSingleValue(value: number): string {
   return governanceFacade.enforceComputation(value, (v: number) => facade.resolveValue(v));
 }
 
+function resolveBuilderPipelineProduct(): IFizzBuzzComputationPipelineProduct {
+  if (!iteratorBasedComputationInitialized) {
+    initializeIteratorBasedComputationPipeline();
+  }
+  return builderPipelineProduct!;
+}
+
 export function fizzBuzzValue(value: number): string {
+  const product = resolveBuilderPipelineProduct();
   const orchestrator = resolveMediationOrchestrator();
-  return orchestrator.orchestrateDirectiveResolution(value, (v: number) => resolveInnerSingleValue(v));
+  return product.resolveSingleValue(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const orchestrator = resolveMediationOrchestrator();
-  return orchestrator.orchestrateRangeDirectiveResolution(start, end, (v: number) => resolveInnerSingleValue(v));
+  const product = resolveBuilderPipelineProduct();
+  const iterator = StandardFizzBuzzRangeIteratorFactoryBeanFactory.createIterator(
+    start,
+    end,
+    (v: number) => product.resolveSingleValue(v),
+    false,
+  );
+  const results: string[] = [];
+  while (iterator.hasNext()) {
+    results.push(iterator.next().getValue());
+  }
+  return results;
 }
