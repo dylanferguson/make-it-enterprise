@@ -65,7 +65,9 @@ export class DefaultFizzBuzzComputationGovernancePolicyImpl extends AbstractBase
   private resolveOutputStringProvider(): IFizzBuzzOutputStringResolutionStrategyProvider {
     if (this.outputStringProvider === null) {
       this.outputStringProvider =
-        FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.createProvider();
+        FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.createProvider(
+          "LOCALE_AWARE",
+        );
       console.debug(
         `[${DefaultFizzBuzzComputationGovernancePolicyImpl.POLICY_NAME}] ` +
         `Output string provider initialized: ` +

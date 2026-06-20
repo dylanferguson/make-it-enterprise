@@ -54,6 +54,11 @@ import type { IFizzBuzzRangeIterator } from "./iterators/contracts/IFizzBuzzRang
 import { FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory } from "./builders/factories/FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.js";
 import { DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory } from "./divisibility/factories/DivisibilityModuloEvaluationStrategyProviderFactoryBeanFactory.js";
 import { DivisibilityModuloEvaluationChainHandlerVisitorImpl } from "./divisibility/visitors/DivisibilityModuloEvaluationChainHandlerVisitorImpl.js";
+import { LocalizedMessageResolverFactoryBeanFactory } from "./localization/impl/factories/LocalizedMessageResolverFactoryBeanFactory.js";
+import { LocalizedMessageResolutionChainHandlerFactoryBeanFactory } from "./localization/impl/factories/LocalizedMessageResolutionChainHandlerFactoryBeanFactory.js";
+import { LocaleResolutionStrategyFactoryBeanFactory } from "./localization/impl/factories/LocaleResolutionStrategyFactoryBeanFactory.js";
+import type { ILocalizedMessageResolver } from "./localization/contracts/ILocalizedMessageResolver.js";
+import { DefaultLocaleResolutionStrategyImpl } from "./localization/impl/locales/DefaultLocaleResolutionStrategyImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -219,6 +224,28 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         );
         jmsInfrastructureInitialized = true;
       }
+    }
+  }
+  {
+    let localizationInitialized = false;
+    if (LocalizedMessageResolutionChainHandlerFactoryBeanFactory.getChainHead() === null) {
+      const chainHandler = LocalizedMessageResolutionChainHandlerFactoryBeanFactory.createChainHandler("FULL");
+      const localeStrategy = LocaleResolutionStrategyFactoryBeanFactory.createLocaleResolutionStrategy("DEFAULT");
+      const resolver = LocalizedMessageResolverFactoryBeanFactory.createResolver(chainHandler, localeStrategy);
+      console.debug(
+        `[LocalizationInfrastructure] Enterprise localized message resolution infrastructure initialized: ` +
+        `resolver=[${resolver.getResolverName()} v${resolver.getResolverVersion()}], ` +
+        `chain=[${chainHandler.getChainHandlerName()} v${chainHandler.getChainHandlerVersion()}], ` +
+        `locales=[${resolver.getSupportedLocales().join(", ")}], ` +
+        `localeStrategy=[${localeStrategy.getStrategyName()}]`,
+      );
+      localizationInitialized = true;
+    }
+    if (localizationInitialized) {
+      console.debug(
+        `[LocalizationInfrastructure] Enterprise output message localization bootstrap complete – ` +
+        `default locale=${new DefaultLocaleResolutionStrategyImpl().resolveLocale()}`,
+      );
     }
   }
   return true;

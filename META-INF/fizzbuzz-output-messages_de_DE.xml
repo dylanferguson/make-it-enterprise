@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+  <comment>FizzBuzz Enterprise Edition - Localized Output Message Resource Bundle (de_DE)</comment>
+  <entry key="fizzbuzz.output.message.fizz">Fizz</entry>
+  <entry key="fizzbuzz.output.message.buzz">Buzz</entry>
+  <entry key="fizzbuzz.output.message.fizzbuzz">FizzBuzz</entry>
+  <entry key="fizzbuzz.output.message.number">{0}</entry>
+</properties>

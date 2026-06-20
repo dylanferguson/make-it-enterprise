@@ -1,5 +1,6 @@
 import type { IFizzBuzzOutputStringResolutionStrategyProvider } from "../../contracts/index.js";
 import type { IFizzBuzzOutputStringResolutionStrategyFactoryBean } from "../../contracts/index.js";
+import type { IFizzBuzzOutputStringResolutionStrategy } from "../../contracts/index.js";
 import { DefaultFizzBuzzOutputStringResolutionStrategyRegistryImpl } from "../registry/DefaultFizzBuzzOutputStringResolutionStrategyRegistryImpl.js";
 import { DefaultFizzBuzzOutputStringResolutionChainHandlerImpl } from "../chain/DefaultFizzBuzzOutputStringResolutionChainHandlerImpl.js";
 import { DivisibilityAnnotatedOutputStringStrategySelectionVisitorImpl } from "../visitor/DivisibilityAnnotatedOutputStringStrategySelectionVisitorImpl.js";
@@ -8,11 +9,14 @@ import { FizzBuzzOutputStringResolutionStrategyImpl } from "../strategies/FizzBu
 import { FizzOutputStringResolutionStrategyImpl } from "../strategies/FizzOutputStringResolutionStrategyImpl.js";
 import { BuzzOutputStringResolutionStrategyImpl } from "../strategies/BuzzOutputStringResolutionStrategyImpl.js";
 import { NumberOutputStringResolutionStrategyImpl } from "../strategies/NumberOutputStringResolutionStrategyImpl.js";
+import { LocaleAwareFizzBuzzOutputStringResolutionStrategyDecoratorImpl } from "../../../localization/impl/decorators/LocaleAwareFizzBuzzOutputStringResolutionStrategyDecoratorImpl.js";
 
 export const FizzBuzzOutputStringResolutionStrategyFactoryConfigurationProfile = {
   STANDARD: "STANDARD",
   STRICT_VALIDATION: "STRICT_VALIDATION",
   HIGH_THROUGHPUT: "HIGH_THROUGHPUT",
+  LOCALE_AWARE: "LOCALE_AWARE",
+  LOCALE_AWARE_STRICT: "LOCALE_AWARE_STRICT",
 } as const;
 
 export type FizzBuzzOutputStringResolutionStrategyFactoryConfigurationProfile =
@@ -30,16 +34,19 @@ class FizzBuzzOutputStringResolutionStrategyFactoryBeanImpl
   private readonly factoryBeanName: string;
   private readonly factoryBeanVersion: string;
   private readonly isSingletonInstance: boolean;
+  private readonly factoryBeanProfile: FizzBuzzOutputStringResolutionStrategyFactoryConfigurationProfile;
   private provider: IFizzBuzzOutputStringResolutionStrategyProvider | null = null;
 
   constructor(
     factoryBeanName: string,
     factoryBeanVersion: string,
     isSingleton: boolean,
+    profile: FizzBuzzOutputStringResolutionStrategyFactoryConfigurationProfile = "STANDARD",
   ) {
     this.factoryBeanName = factoryBeanName;
     this.factoryBeanVersion = factoryBeanVersion;
     this.isSingletonInstance = isSingleton;
+    this.factoryBeanProfile = profile;
   }
 
   createProvider(): IFizzBuzzOutputStringResolutionStrategyProvider {
@@ -51,10 +58,18 @@ class FizzBuzzOutputStringResolutionStrategyFactoryBeanImpl
     const chainHandler = new DefaultFizzBuzzOutputStringResolutionChainHandlerImpl();
     const visitor = new DivisibilityAnnotatedOutputStringStrategySelectionVisitorImpl();
 
-    const fizzBuzzStrategy = new FizzBuzzOutputStringResolutionStrategyImpl();
-    const fizzStrategy = new FizzOutputStringResolutionStrategyImpl();
-    const buzzStrategy = new BuzzOutputStringResolutionStrategyImpl();
-    const numberStrategy = new NumberOutputStringResolutionStrategyImpl();
+    const isLocaleAware = this.factoryBeanProfile === "LOCALE_AWARE"
+      || this.factoryBeanProfile === "LOCALE_AWARE_STRICT";
+
+    const wrapIfLocaleAware = (strategy: IFizzBuzzOutputStringResolutionStrategy): IFizzBuzzOutputStringResolutionStrategy => {
+      if (!isLocaleAware) return strategy;
+      return new LocaleAwareFizzBuzzOutputStringResolutionStrategyDecoratorImpl(strategy);
+    };
+
+    const fizzBuzzStrategy = wrapIfLocaleAware(new FizzBuzzOutputStringResolutionStrategyImpl());
+    const fizzStrategy = wrapIfLocaleAware(new FizzOutputStringResolutionStrategyImpl());
+    const buzzStrategy = wrapIfLocaleAware(new BuzzOutputStringResolutionStrategyImpl());
+    const numberStrategy = wrapIfLocaleAware(new NumberOutputStringResolutionStrategyImpl());
 
     chainHandler.registerStrategyHandler(fizzBuzzStrategy, 0);
     chainHandler.registerStrategyHandler(fizzStrategy, 1);
@@ -108,6 +123,7 @@ export class FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory {
       `${FACTORY_BEAN_NAME}:${profile}`,
       FACTORY_BEAN_VERSION,
       true,
+      profile,
     );
   }
 
