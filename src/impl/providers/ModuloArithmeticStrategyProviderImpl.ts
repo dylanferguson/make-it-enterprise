@@ -1,11 +1,14 @@
 import { AbstractBaseModuloArithmeticStrategyProvider } from "../../abstracts/AbstractBaseModuloArithmeticStrategyProvider.js";
 import type { IModuloArithmeticStrategy } from "../../contracts/IModuloArithmeticStrategy.js";
+import type { IModuloEvaluationStrategyProvider } from "../../contracts/IModuloEvaluationStrategyProvider.js";
 import { DefaultModuloArithmeticStrategyImpl } from "../strategies/DefaultModuloArithmeticStrategyImpl.js";
 
 export class ModuloArithmeticStrategyProviderImpl extends AbstractBaseModuloArithmeticStrategyProvider {
-  constructor() {
+  constructor(evaluationStrategyProvider: IModuloEvaluationStrategyProvider) {
     super();
-    this.setDefaultStrategy(new DefaultModuloArithmeticStrategyImpl());
+    this.setDefaultStrategy(
+      new DefaultModuloArithmeticStrategyImpl(evaluationStrategyProvider),
+    );
   }
 
   override getStrategy(): IModuloArithmeticStrategy {

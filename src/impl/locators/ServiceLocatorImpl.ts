@@ -5,6 +5,7 @@ import type { IFizzBuzzStrategyFactory } from "../../contracts/IFizzBuzzStrategy
 import type { ICompositeValueResolver } from "../../contracts/ICompositeValueResolver.js";
 import type { IRangeCalculator } from "../../contracts/IRangeCalculator.js";
 import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
+import type { IModuloEvaluationStrategyProvider } from "../../contracts/IModuloEvaluationStrategyProvider.js";
 import type { IStrategyRegistry } from "../../contracts/IStrategyRegistry.js";
 import type { IFizzBuzzSessionManager } from "../../contracts/IFizzBuzzSessionManager.js";
 import type { IResultPostProcessorChain } from "../../contracts/IResultPostProcessorChain.js";
@@ -15,6 +16,7 @@ import { FizzBuzzHandlerChain } from "../handlers/FizzBuzzHandlerChain.js";
 import { CompositeValueResolverImpl } from "../resolvers/CompositeValueResolverImpl.js";
 import { FizzBuzzRangeCalculatorImpl } from "../calculators/FizzBuzzRangeCalculatorImpl.js";
 import { ModuloArithmeticStrategyProviderImpl } from "../providers/ModuloArithmeticStrategyProviderImpl.js";
+import { ModuloEvaluationStrategyFactoryBeanFactory } from "../factories/ModuloEvaluationStrategyFactoryBean.js";
 import { DivisibilityCheckVisitor } from "../visitors/DivisibilityCheckVisitor.js";
 import { StrategyRegistryImpl } from "../registry/StrategyRegistryImpl.js";
 import { FizzBuzzConfigurationContext } from "../configuration/FizzBuzzConfigurationContext.js";
@@ -27,9 +29,19 @@ import { PassThroughResultPostProcessor } from "../postprocessors/PassThroughRes
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
+  private moduloEvaluationStrategyFactoryBean: ReturnType<
+    typeof ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean
+  > | null = null;
 
   override initialize(): void {
-    const strategyProvider: IModuloArithmeticStrategyProvider = new ModuloArithmeticStrategyProviderImpl();
+    this.moduloEvaluationStrategyFactoryBean =
+      ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean(
+        "FizzBuzzServiceLocatorModuloEvaluationStrategyFactoryBean",
+      );
+    const evaluationStrategyProvider: IModuloEvaluationStrategyProvider =
+      this.moduloEvaluationStrategyFactoryBean.createProvider();
+    const strategyProvider: IModuloArithmeticStrategyProvider =
+      new ModuloArithmeticStrategyProviderImpl(evaluationStrategyProvider);
     const registry: IStrategyRegistry = new StrategyRegistryImpl();
     const visitor = new DivisibilityCheckVisitor(strategyProvider);
     const outputFormatter: IFizzBuzzOutputFormatter = new FizzBuzzOutputFormatterImpl();
@@ -99,5 +111,15 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   override getRangeCalculator(): IRangeCalculator {
     this.ensureInitialized();
     return this.configurationContext!.getRangeCalculator();
+  }
+
+  override getModuloEvaluationStrategyProvider(): IModuloEvaluationStrategyProvider {
+    this.ensureInitialized();
+    if (this.moduloEvaluationStrategyFactoryBean === null) {
+      throw new Error(
+        "ModuloEvaluationStrategyFactoryBean not initialized in ServiceLocatorImpl",
+      );
+    }
+    return this.moduloEvaluationStrategyFactoryBean.createProvider();
   }
 }
