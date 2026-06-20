@@ -1,0 +1,32 @@
+Make this project more enterprise-grade.
+
+Perform exactly one coherent round of enterprise transformation. Preserve the
+externally observable FizzBuzz behavior and keep the test suite passing. Build
+on the current state instead of undoing prior iterations.
+
+Channel the era of early-2000s Java enterprise architecture — the period that
+gave Java its reputation for suffocating simple problems in indirection. Every
+concept should aspire to be expressed through at least one interface, one
+abstract base class, and one concrete implementation. Factories should produce
+other factories. Strategies should be selected by strategy selectors. Builders
+should construct objects that could have been object literals.
+
+Lean into the naming conventions of that era: ISomethingProvider,
+AbstractBaseSomethingImpl, SomethingManagerHandlerFacadeFactory. Apply Gang of
+Four patterns not because they are appropriate but because they exist: Command,
+Visitor, Chain of Responsibility, Template Method, Decorator stacked on
+Decorator. The FizzBuzz computation itself should become progressively harder
+to locate, buried under layers of delegation and abstraction.
+
+If iteration 1 computes `n % 3`, iteration 10 should have an
+AbstractDivisibilityStrategyProvider that resolves a concrete
+ModuloEvaluationStrategyFactoryBean registered in a ServiceLocator, which
+delegates to a ChainOfResponsibilityHandler, which eventually calls something
+that does `n % 3`.
+
+Infrastructure and operational theater is also welcome — Kubernetes, CI, SLOs,
+ADRs — but it is secondary. The primary disease is in the TypeScript source.
+
+Inspect the project, implement the changes, run the relevant tests and
+typechecks, then stop. Do not ask for clarification. Do not push to a remote
+or access anything outside the repository.
