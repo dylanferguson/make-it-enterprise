@@ -51,6 +51,7 @@ import { StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory } from "./
 import { StandardFizzBuzzRangeIteratorFactoryBeanFactory } from "./iterators/factories/StandardFizzBuzzRangeIteratorFactoryBeanFactory.js";
 import type { IFizzBuzzComputationPipelineProduct } from "./builders/contracts/IFizzBuzzComputationPipelineBuilder.js";
 import type { IFizzBuzzRangeIterator } from "./iterators/contracts/IFizzBuzzRangeIterator.js";
+import { FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory } from "./builders/factories/FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -222,16 +223,26 @@ function initializeIteratorBasedComputationPipeline(): void {
   const orchestrator = resolveMediationOrchestrator();
   const facade = resolveResolutionFacade();
 
+  const configurationProvider =
+    FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.createConfigurationProvider(true);
+  const configProfile = configurationProvider.resolveConfigurationProfile("ENTERPRISE_ITERATOR_BASED");
+  const decoratorChainProfile = configProfile.getDecoratorChainProfile();
+
   const builder = StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.createBuilder(false);
   builder
     .withGovernanceEnforcement(governanceEnforcer)
     .withMediationOrchestrator(orchestrator)
     .withResolutionFacade(facade)
-    .withConfigurationProfile("ENTERPRISE_ITERATOR_BASED")
-    .withSlaThreshold(50)
-    .withCacheEnabled(true);
+    .withConfigurationProfile(configProfile.getProfileName())
+    .withSlaThreshold(configProfile.getSlaThresholdMs())
+    .withCacheEnabled(configProfile.isCacheEnabled());
 
-  builderPipelineProduct = StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.buildProduct(builder);
+  const rawProduct = StandardFizzBuzzComputationPipelineBuilderFactoryBeanFactory.buildProduct(builder);
+
+  builderPipelineProduct = FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.applyDecoratorChain(
+    rawProduct,
+    decoratorChainProfile,
+  );
 
   const iterator = StandardFizzBuzzRangeIteratorFactoryBeanFactory.createIterator(
     1, 100,
@@ -243,6 +254,7 @@ function initializeIteratorBasedComputationPipeline(): void {
     `[IteratorBasedComputationPipeline] Pipeline product initialized: ` +
     `product=[${builderPipelineProduct.getProductName()} v${builderPipelineProduct.getProductVersion()}], ` +
     `profile=[${builderPipelineProduct.getPipelineConfigurationProfile()}], ` +
+    `decoratorChain=[${decoratorChainProfile}], ` +
     `iterator=[${iterator.getIteratorName()} v${iterator.getIteratorVersion()}], ` +
     `diagnostics=[${JSON.stringify(builderPipelineProduct.getDiagnosticSummary())}]`,
   );
@@ -324,6 +336,7 @@ function resolveInnerSingleValue(value: number): string {
 
 function resolveBuilderPipelineProduct(): IFizzBuzzComputationPipelineProduct {
   if (!iteratorBasedComputationInitialized) {
+    FizzBuzzPipelineProductConfigurationProviderFactoryBeanFactory.createConfigurationProvider(true);
     initializeIteratorBasedComputationPipeline();
   }
   return builderPipelineProduct!;
