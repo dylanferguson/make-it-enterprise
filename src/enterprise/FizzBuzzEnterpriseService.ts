@@ -22,12 +22,26 @@ import { RangeComputationCompletedEventImpl } from "../impl/events/RangeComputat
 import { FizzBuzzComputationBridgeFactoryBeanFactory, FizzBuzzComputationBridgeType } from "../impl/factories/FizzBuzzComputationBridgeFactoryBean.js";
 import { FizzBuzzComputationMediatorFactoryBeanFactory } from "../impl/factories/FizzBuzzComputationMediatorFactoryBean.js";
 import { FizzBuzzStrategyFlyweightFactoryBean } from "../impl/factories/FizzBuzzStrategyFlyweightFactoryBean.js";
+import { FizzBuzzLifecycleManagerFactoryBean } from "../impl/factories/FizzBuzzLifecycleManagerFactoryBean.js";
+import { FizzBuzzContainerManagedBeanImpl } from "../impl/lifecycle/FizzBuzzContainerManagedBeanImpl.js";
+import { FizzBuzzResolverLifecycleManagedBeanImpl } from "../impl/lifecycle/FizzBuzzResolverLifecycleManagedBeanImpl.js";
+import { FizzBuzzResourceAdapterFactoryBean } from "../impl/factories/FizzBuzzResourceAdapterFactoryBean.js";
+import { FizzBuzzResourceAdapterImpl } from "../impl/resource/FizzBuzzResourceAdapterImpl.js";
+import { FizzBuzzManagedConnectionFactoryImpl } from "../impl/resource/FizzBuzzResourceAdapterImpl.js";
+import { FizzBuzzPropertyPlaceholderConfigurerImpl } from "../impl/config/FizzBuzzPropertyPlaceholderConfigurerImpl.js";
+import type { ILifecycleManager } from "../contracts/ILifecycleManager.js";
+import type { IResourceAdapter } from "../contracts/IResourceAdapter.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
+  private static lifecycleManager: ILifecycleManager | null = null;
+  private static resourceAdapter: IResourceAdapter | null = null;
+  private static propertyConfigurer: FizzBuzzPropertyPlaceholderConfigurerImpl | null = null;
 
   static createEnterpriseService(): FizzBuzzEnterpriseService {
     if (FizzBuzzEnterpriseServiceFactoryBeanFactory.instance === null) {
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer = new FizzBuzzPropertyPlaceholderConfigurerImpl();
+
       const serviceLocator = new ServiceLocatorImpl();
       const healthAggregator = new HealthCheckAggregatorImpl();
       const sloCollector = new SloMetricsCollectorImpl();
@@ -140,12 +154,84 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
         selectorFactory,
         strategySelector,
       );
+
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.initializeEnterpriseInfrastructure(
+        enterpriseContext,
+        FizzBuzzEnterpriseServiceFactoryBeanFactory.instance,
+      );
     }
     return FizzBuzzEnterpriseServiceFactoryBeanFactory.instance;
   }
 
+  private static initializeEnterpriseInfrastructure(
+    enterpriseContext: EnterpriseApplicationContextImpl,
+    service: FizzBuzzEnterpriseService,
+  ): void {
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager =
+      FizzBuzzLifecycleManagerFactoryBean.createLifecycleManager();
+
+    const containerBean = new FizzBuzzContainerManagedBeanImpl(enterpriseContext);
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.registerManagedBean(containerBean);
+
+    const resolver = enterpriseContext.getValueResolver();
+    const resolverBean = new FizzBuzzResolverLifecycleManagedBeanImpl(resolver);
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.registerManagedBean(resolverBean);
+
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter =
+      FizzBuzzResourceAdapterFactoryBean.createResourceAdapter();
+    const mcf = new FizzBuzzManagedConnectionFactoryImpl();
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter.registerManagedConnectionFactory(mcf);
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.registerManagedBean(
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter as FizzBuzzResourceAdapterImpl,
+    );
+
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.initializeAll();
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.startAll();
+
+    const appName = FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer!
+      .resolvePlaceholderOrDefault("fizzbuzz.application.name", "FizzBuzzEnterpriseEdition");
+    const appVersion = FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer!
+      .resolvePlaceholderOrDefault("fizzbuzz.application.version", "2.0.0-ENTERPRISE");
+    const cacheEnabled = FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer!
+      .resolvePlaceholderOrDefault("fizzbuzz.cache.enabled", "true");
+
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.instance!.setConfiguration(
+      appName,
+      appVersion,
+      cacheEnabled === "true",
+    );
+
+    console.debug(
+      `[EnterpriseInfrastructure] Lifecycle initialized: ${FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.getManagedBeanNames().length} beans`,
+    );
+    console.debug(
+      `[EnterpriseInfrastructure] Resource adapter: ${FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter.getResourceAdapterName()}`,
+    );
+    console.debug(
+      `[EnterpriseInfrastructure] Config: appName=${appName}, version=${appVersion}, cache=${cacheEnabled}`,
+    );
+  }
+
   static resetEnterpriseService(): void {
+    if (FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager !== null) {
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.stopAll();
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager.destroyAll();
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager = null;
+    }
+    if (FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter !== null) {
+      FizzBuzzResourceAdapterFactoryBean.resetResourceAdapter();
+      FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter = null;
+    }
+    FizzBuzzEnterpriseServiceFactoryBeanFactory.propertyConfigurer = null;
     FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = null;
+  }
+
+  static getLifecycleManager(): ILifecycleManager | null {
+    return FizzBuzzEnterpriseServiceFactoryBeanFactory.lifecycleManager;
+  }
+
+  static getResourceAdapter(): IResourceAdapter | null {
+    return FizzBuzzEnterpriseServiceFactoryBeanFactory.resourceAdapter;
   }
 }
 
@@ -157,6 +243,9 @@ export class FizzBuzzEnterpriseService {
   private readonly deploymentDescriptorReader: object | null;
   private readonly selectorFactory: object | null;
   private readonly strategySelector: object | null;
+  private configuredApplicationName: string = "FizzBuzzEnterpriseEdition";
+  private configuredApplicationVersion: string = "2.0.0-ENTERPRISE";
+  private cacheEnabled: boolean = true;
 
   constructor(
     mediator: IFizzBuzzComputationMediator,
@@ -174,6 +263,16 @@ export class FizzBuzzEnterpriseService {
     this.deploymentDescriptorReader = deploymentDescriptorReader;
     this.selectorFactory = selectorFactory;
     this.strategySelector = strategySelector;
+  }
+
+  setConfiguration(
+    applicationName: string,
+    applicationVersion: string,
+    cacheEnabled: boolean,
+  ): void {
+    this.configuredApplicationName = applicationName;
+    this.configuredApplicationVersion = applicationVersion;
+    this.cacheEnabled = cacheEnabled;
   }
 
   getEventBus(): IComputationEventNotificationBus {

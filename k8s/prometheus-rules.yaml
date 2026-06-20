@@ -1,0 +1,40 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fizzbuzz-alerting-rules
+  namespace: fizzbuzz-system
+  labels:
+    app: fizzbuzz
+    tier: enterprise
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: fizzbuzz-slo-alerts
+      interval: 30s
+      rules:
+        - alert: FizzBuzzHighLatency
+          expr: |
+            histogram_quantile(0.99, rate(fizzbuzz_resolve_duration_seconds_bucket[5m])) > 0.05
+          for: 1m
+          labels:
+            severity: critical
+            slo: latency
+          annotations:
+            summary: "FizzBuzz p99 latency exceeds SLO of 50ms"
+        - alert: FizzBuzzErrorBudgetBurning
+          expr: |
+            sum(rate(fizzbuzz_resolve_errors_total[5m])) / sum(rate(fizzbuzz_resolve_total[5m])) > 0.001
+          for: 5m
+          labels:
+            severity: warning
+            slo: availability
+          annotations:
+            summary: "FizzBuzz error rate exceeds 0.1% SLO budget"
+        - alert: FizzBuzzHealthCheckFailed
+          expr: |
+            fizzbuzz_health_check_status{status="unhealthy"} > 0
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            summary: "FizzBuzz health check reporting unhealthy status"
