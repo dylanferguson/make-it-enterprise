@@ -110,6 +110,7 @@ import { EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory
 import { EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory.js";
 import { EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computedoutcome/factories/EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IPreEvaluationAwareResolutionFacadeDecorator } from "./computedoutcome/contracts/index.js";
+import { EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory } from "./outputcomposite/factories/EnterpriseOutputCompositeFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -421,6 +422,17 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `commands=[${preEvaluationChain.getRegisteredCommandNames().join(", ")}], ` +
       `registeredCommandCount=[${preEvaluationChain.getRegisteredCommandCount()}], ` +
       `registryCommandCount=[${preEvaluationRegistry.getRegisteredCommandCount()}]`,
+    );
+  }
+  {
+    const compositeProvider =
+      EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory.initializeProviderInfrastructure();
+    console.debug(
+      `[OutputCompositeInfrastructure] Enterprise output composite strategy provider infrastructure initialized: ` +
+      `provider=[${compositeProvider.getProviderName()} v${compositeProvider.getProviderVersion()}], ` +
+      `compositeEnabled=[${compositeProvider.isCompositeResolutionEnabled()}], ` +
+      `registry=[${compositeProvider.getRegistry()?.getRegistryName() ?? "N/A"} v${compositeProvider.getRegistry()?.getRegistryVersion() ?? "N/A"}], ` +
+      `components=[${compositeProvider.getRegistry()?.getRegisteredComponentNames().join(", ") ?? "N/A"}]`,
     );
   }
   return true;

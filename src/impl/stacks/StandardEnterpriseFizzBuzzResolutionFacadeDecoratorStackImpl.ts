@@ -2,10 +2,22 @@ import { AbstractBaseEnterpriseFizzBuzzResolutionFacadeDecoratorStack } from "..
 import type { IFizzBuzzComputationCommand } from "../../contracts/IFizzBuzzComputationCommand.js";
 import type { IFizzBuzzComputationCommandDecorator } from "../../contracts/IFizzBuzzComputationCommandDecorator.js";
 import type { IEnterpriseFizzBuzzResolutionFacadeDecoratorStack } from "../../contracts/IEnterpriseFizzBuzzResolutionFacadeDecoratorStack.js";
+import { EnterpriseOutputCompositeDecoratorFactoryBeanFactory, EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory } from "../../outputcomposite/factories/EnterpriseOutputCompositeFactoryBeanFactory.js";
+import { EnterpriseOutputCompositeAwareComputationCommandDecoratorImpl } from "../../outputcomposite/impl/decorators/EnterpriseOutputCompositeAwareComputationCommandDecoratorImpl.js";
 
 interface DecoratorRegistrationEntry {
   decoratorType: new (wrapped: IFizzBuzzComputationCommand) => IFizzBuzzComputationCommandDecorator;
   priority: number;
+}
+
+class EnterpriseOutputCompositeDecoratorWrapper
+  extends EnterpriseOutputCompositeAwareComputationCommandDecoratorImpl
+{
+  constructor(wrapped: IFizzBuzzComputationCommand) {
+    const provider =
+      EnterpriseOutputCompositeStrategyProviderFactoryBeanFactory.initializeProviderInfrastructure();
+    super(wrapped, provider);
+  }
 }
 
 export class StandardEnterpriseFizzBuzzResolutionFacadeDecoratorStackImpl
@@ -19,6 +31,16 @@ export class StandardEnterpriseFizzBuzzResolutionFacadeDecoratorStackImpl
 
   constructor() {
     super();
+    this.registerCompositeDecorator();
+  }
+
+  private registerCompositeDecorator(): void {
+    const compositePriority =
+      EnterpriseOutputCompositeDecoratorFactoryBeanFactory.getDecoratorPriority();
+    this.registerDecoratorType(
+      EnterpriseOutputCompositeDecoratorWrapper,
+      compositePriority,
+    );
   }
 
   override buildDecoratorStack(baseCommand: IFizzBuzzComputationCommand): IFizzBuzzComputationCommand {
