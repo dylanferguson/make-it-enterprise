@@ -1,9 +1,19 @@
 import { AbstractBaseFizzBuzzStrategyResolutionChainHandler } from "../../abstracts/AbstractBaseFizzBuzzStrategyResolutionChainHandler.js";
+import { FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory } from "../../outputresolution/impl/factories/FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.js";
+import { FizzBuzzOutputStringResolutionStrategyImpl } from "../../outputresolution/impl/strategies/FizzBuzzOutputStringResolutionStrategyImpl.js";
+import { FizzOutputStringResolutionStrategyImpl } from "../../outputresolution/impl/strategies/FizzOutputStringResolutionStrategyImpl.js";
+import { BuzzOutputStringResolutionStrategyImpl } from "../../outputresolution/impl/strategies/BuzzOutputStringResolutionStrategyImpl.js";
+import type { IFizzBuzzOutputStringResolutionStrategyProvider } from "../../outputresolution/contracts/index.js";
 
 export class DefaultFizzBuzzStrategyResolutionChainHandlerImpl extends AbstractBaseFizzBuzzStrategyResolutionChainHandler {
   private static readonly HANDLER_NAME = "DefaultFizzBuzzStrategyResolutionChainHandler";
   private static readonly HANDLER_PRIORITY = 0;
   private static readonly DEFAULT_STRATEGY_TYPE = "DEFAULT_MODULO_ARITHMETIC_STRATEGY";
+
+  private outputStringProvider: IFizzBuzzOutputStringResolutionStrategyProvider | null = null;
+  private readonly fizzBuzzStrategy = new FizzBuzzOutputStringResolutionStrategyImpl();
+  private readonly fizzStrategy = new FizzOutputStringResolutionStrategyImpl();
+  private readonly buzzStrategy = new BuzzOutputStringResolutionStrategyImpl();
 
   constructor() {
     super(
@@ -26,10 +36,18 @@ export class DefaultFizzBuzzStrategyResolutionChainHandlerImpl extends AbstractB
   }
 
   private resolveApplicableDivisor(value: number): number | null {
-    if (value % 15 === 0) return 15;
-    if (value % 3 === 0) return 3;
-    if (value % 5 === 0) return 5;
+    if (this.fizzBuzzStrategy.canResolve(value)) return 15;
+    if (this.fizzStrategy.canResolve(value)) return 3;
+    if (this.buzzStrategy.canResolve(value)) return 5;
     return null;
+  }
+
+  private resolveOutputStringProvider(): IFizzBuzzOutputStringResolutionStrategyProvider {
+    if (this.outputStringProvider === null) {
+      this.outputStringProvider =
+        FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.createProvider();
+    }
+    return this.outputStringProvider;
   }
 
   private validateOperand(value: number): void {

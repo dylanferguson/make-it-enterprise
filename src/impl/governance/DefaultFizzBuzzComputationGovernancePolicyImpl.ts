@@ -1,17 +1,21 @@
 import { AbstractBaseComputationGovernancePolicy } from "../../abstracts/AbstractBaseComputationGovernancePolicy.js";
+import { FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory } from "../../outputresolution/impl/factories/FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.js";
+import type { IFizzBuzzOutputStringResolutionStrategyProvider } from "../../outputresolution/contracts/index.js";
 
 export class DefaultFizzBuzzComputationGovernancePolicyImpl extends AbstractBaseComputationGovernancePolicy {
   private static readonly POLICY_NAME = "DefaultFizzBuzzComputationGovernancePolicy";
-  private static readonly POLICY_VERSION = "1.0.0-GOVERNANCE-POLICY-FIZZBUZZ";
+  private static readonly POLICY_VERSION = "1.0.1-GOVERNANCE-POLICY-FIZZBUZZ-R2";
   private static readonly COMPUTATION_TYPE = "FIZZBUZZ_VALUE_RESOLUTION";
   private static readonly POLICY_PRIORITY = 100;
   private static readonly POLICY_DESCRIPTION =
     "Enforces standard FizzBuzz computation governance rules: validates that input values " +
     "fall within the acceptable computation range (0-65535) and that results conform to " +
-    "the expected FizzBuzz output format constraints.";
+    "the expected FizzBuzz output format constraints. Output validation is delegated to " +
+    "the Enterprise FizzBuzzOutputStringResolutionStrategyProvider infrastructure.";
 
   private readonly minAcceptableValue: number;
   private readonly maxAcceptableValue: number;
+  private outputStringProvider: IFizzBuzzOutputStringResolutionStrategyProvider | null = null;
 
   constructor(
     minValue: number = 0,
@@ -48,15 +52,27 @@ export class DefaultFizzBuzzComputationGovernancePolicyImpl extends AbstractBase
     if (result.length === 0) {
       return false;
     }
-    if (value % 3 === 0 && value % 5 === 0) {
-      return result === "FizzBuzz";
+    const resolutionResult = this.resolveExpectedOutputString(value);
+    return result === resolutionResult;
+  }
+
+  private resolveExpectedOutputString(value: number): string {
+    const provider = this.resolveOutputStringProvider();
+    const resolutionResult = provider.resolveOutputString(value);
+    return resolutionResult.getResolvedValue();
+  }
+
+  private resolveOutputStringProvider(): IFizzBuzzOutputStringResolutionStrategyProvider {
+    if (this.outputStringProvider === null) {
+      this.outputStringProvider =
+        FizzBuzzOutputStringResolutionStrategyFactoryBeanFactory.createProvider();
+      console.debug(
+        `[${DefaultFizzBuzzComputationGovernancePolicyImpl.POLICY_NAME}] ` +
+        `Output string provider initialized: ` +
+        `${this.outputStringProvider.getProviderName()} v${this.outputStringProvider.getProviderVersion()}, ` +
+        `strategies=[${this.outputStringProvider.getRegisteredStrategyNames().join(", ")}]`,
+      );
     }
-    if (value % 3 === 0) {
-      return result === "Fizz";
-    }
-    if (value % 5 === 0) {
-      return result === "Buzz";
-    }
-    return result === String(value);
+    return this.outputStringProvider;
   }
 }
