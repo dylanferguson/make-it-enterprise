@@ -17,7 +17,10 @@ export class BuzzOutputStringResolutionStrategyImpl extends AbstractBaseFizzBuzz
   }
 
   override canResolve(value: number): boolean {
-    return value % 5 === 0 && value % 3 !== 0;
+    const operatorProvider = this.getDivisibilityOperatorProvider();
+    const operatorFor5 = operatorProvider.resolveOperatorForDivisor(5);
+    const operatorFor3 = operatorProvider.resolveOperatorForDivisor(3);
+    return operatorFor5.isDivisibleBy(value, 5) && !operatorFor3.isDivisibleBy(value, 3);
   }
 
   override resolve(value: number): string {

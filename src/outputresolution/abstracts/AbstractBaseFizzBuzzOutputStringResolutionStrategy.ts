@@ -1,4 +1,6 @@
 import type { IFizzBuzzOutputStringResolutionStrategy } from "../contracts/index.js";
+import type { IDivisibilityOperatorProvider } from "../../operators/contracts/IDivisibilityOperatorProvider.js";
+import { DivisibilityOperatorProviderFactoryBeanFactory } from "../../operators/impl/factories/DivisibilityOperatorProviderFactoryBeanFactory.js";
 
 export abstract class AbstractBaseFizzBuzzOutputStringResolutionStrategy
   implements IFizzBuzzOutputStringResolutionStrategy
@@ -7,17 +9,25 @@ export abstract class AbstractBaseFizzBuzzOutputStringResolutionStrategy
   private readonly strategyVersion: string;
   private readonly priority: number;
   private readonly resolvedIdentifier: string;
+  private readonly divisibilityOperatorProvider: IDivisibilityOperatorProvider;
 
   constructor(
     strategyName: string,
     strategyVersion: string,
     priority: number,
     resolvedIdentifier: string,
+    divisibilityOperatorProvider?: IDivisibilityOperatorProvider,
   ) {
     this.strategyName = strategyName;
     this.strategyVersion = strategyVersion;
     this.priority = priority;
     this.resolvedIdentifier = resolvedIdentifier;
+    this.divisibilityOperatorProvider = divisibilityOperatorProvider
+      ?? DivisibilityOperatorProviderFactoryBeanFactory.createProvider();
+  }
+
+  protected getDivisibilityOperatorProvider(): IDivisibilityOperatorProvider {
+    return this.divisibilityOperatorProvider;
   }
 
   getName(): string {
