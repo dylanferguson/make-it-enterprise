@@ -4,6 +4,7 @@ import { EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStageImpl } from
 import { EnterpriseFizzBuzzResultCanonicalizationNormalizationStageImpl } from "./EnterpriseFizzBuzzResultCanonicalizationNormalizationStageImpl.js";
 import { EnterpriseFizzBuzzResultFormatVerificationNormalizationStageImpl } from "./EnterpriseFizzBuzzResultFormatVerificationNormalizationStageImpl.js";
 import { EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl } from "./EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl.js";
+import { EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl } from "./EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl.js";
 
 export const EnterpriseFizzBuzzNormalizationStageConfigurationProfile = {
   STANDARD: "STANDARD",
@@ -37,11 +38,13 @@ export class StandardEnterpriseFizzBuzzOutputNormalizationPipelineConfiguratorIm
         break;
       case "OBSERVABILITY_FOCUSED":
         stages.push(new EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStageImpl());
+        stages.push(new EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl());
         break;
       case "STRICT":
         stages.push(new EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultCanonicalizationNormalizationStageImpl());
+        stages.push(new EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultFormatVerificationNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl());
         break;
@@ -49,6 +52,7 @@ export class StandardEnterpriseFizzBuzzOutputNormalizationPipelineConfiguratorIm
       default:
         stages.push(new EnterpriseFizzBuzzResultNonEmptyValidationNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultCanonicalizationNormalizationStageImpl());
+        stages.push(new EnterpriseFizzBuzzDivisibilityDelegationBackedOutputResolutionNormalizationStageImpl());
         stages.push(new EnterpriseFizzBuzzResultSloMetricsCollectionNormalizationStageImpl());
         break;
     }
