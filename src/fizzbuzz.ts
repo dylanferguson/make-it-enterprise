@@ -139,6 +139,18 @@ import type { IFizzBuzzPipelineManager } from "./pipeline/contracts/IFizzBuzzPip
 import type { IPipelineManagerResolutionStrategySelector } from "./pipelineresolution/contracts/IPipelineManagerResolutionStrategySelector.js";
 import { PipelineManagerResolutionStrategyInfrastructureProviderFactoryBeanFactory } from "./pipelineresolution/factories/PipelineManagerResolutionStrategyInfrastructureProviderFactoryBeanFactory.js";
 import { FizzBuzzPipelineManagerFactoryBeanFactory, FizzBuzzPipelineManagerConfigurationProfile } from "./pipeline/factories/FizzBuzzPipelineManagerFactoryBeanFactory.js";
+import { JndiInitialContextFactoryBeanFactory } from "./jndi/factories/JndiInitialContextFactoryBeanFactory.js";
+import type { IJndiInitialContext } from "./jndi/contracts/IJndiInitialContext.js";
+import { RmiRegistryFactoryBeanFactory } from "./rmi/factories/RmiRegistryFactoryBeanFactory.js";
+import { FizzBuzzComputationRmiStubFactoryBeanFactory } from "./rmi/factories/FizzBuzzComputationRmiStubFactoryBeanFactory.js";
+import type { IRmiRemoteStub } from "./rmi/contracts/IRmiRemoteStub.js";
+import { EjbHomeFactoryBeanFactory } from "./ejb/factories/EjbHomeFactoryBeanFactory.js";
+import { EjbJndiBindingFactoryBeanFactory } from "./ejb/factories/EjbJndiBindingFactoryBeanFactory.js";
+import type { IEjbJndiBinding } from "./ejb/contracts/IEjbJndiBinding.js";
+import { CorbaNamingServiceFactoryBeanFactory } from "./corba/factories/CorbaNamingServiceFactoryBeanFactory.js";
+import type { ICorbaObjectReference } from "./corba/contracts/ICorbaObjectReference.js";
+import { EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory } from "./impl/factories/EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory.js";
+import type { IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator } from "./contracts/IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -584,6 +596,42 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!JndiInitialContextFactoryBeanFactory.isInfrastructureInitialized()) {
+      const jndiContext = JndiInitialContextFactoryBeanFactory.initializeJndiInfrastructure(
+        "localhost:1099",
+        "com.enterprise.fizzbuzz.jndi.StandardJndiContextFactoryImpl",
+      );
+      console.debug(
+        `[JndiInfrastructure] Enterprise JNDI naming infrastructure initialized: ` +
+        `context=[${jndiContext.getInitialContextName()} v${jndiContext.getInitialContextVersion()}], ` +
+        `factory=[${JndiInitialContextFactoryBeanFactory.getContextFactory()?.getContextFactoryName() ?? "N/A"}], ` +
+        `bindings=[${jndiContext.getRegisteredBindingNames().length}], ` +
+        `contextOpen=[${jndiContext.isContextOpen()}]`,
+      );
+    }
+  }
+  {
+    if (!RmiRegistryFactoryBeanFactory.isInfrastructureInitialized()) {
+      const rmiRegistry = RmiRegistryFactoryBeanFactory.initializeRmiInfrastructure();
+      console.debug(
+        `[RmiInfrastructure] Enterprise RMI registry infrastructure initialized: ` +
+        `registry=[${rmiRegistry.getRegistryName()} v${rmiRegistry.getRegistryVersion()}], ` +
+        `registeredObjects=[${rmiRegistry.list().length}]`,
+      );
+    }
+  }
+  {
+    if (!CorbaNamingServiceFactoryBeanFactory.isInfrastructureInitialized()) {
+      const corbaNaming = CorbaNamingServiceFactoryBeanFactory.initializeCorbaInfrastructure();
+      console.debug(
+        `[CorbaInfrastructure] Enterprise CORBA CosNaming infrastructure initialized: ` +
+        `namingService=[${corbaNaming.getNamingServiceName()} v${corbaNaming.getNamingServiceVersion()}], ` +
+        `rootContext=[${(corbaNaming as any).getRootContextName?.() ?? "NameService"}], ` +
+        `boundNames=[${corbaNaming.list().join(", ")}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -852,7 +900,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const preEvaluationAware = wrapWithPreEvaluation(aopDecorator);
     const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
     const txAwareDecorator = wrapWithTransactionPropagation(stateMachineAware);
-    return wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
+    const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
+    return wrapWithEnterpriseJndiEjbResolution(adsDecorator);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -868,7 +917,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const preEvaluationAware = wrapWithPreEvaluation(executionCoordinatorAwareFacade);
   const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
   const transactionAware = wrapWithTransactionPropagation(stateMachineAware);
-  return wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
+  const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
+  return wrapWithEnterpriseJndiEjbResolution(adsDecorator);
 }
 
 function wrapWithAbstractDivisibilityStrategyResolution(
@@ -887,6 +937,68 @@ function wrapWithAbstractDivisibilityStrategyResolution(
       `evaluationCount=[${adsDecorator.getDivisibilityEvaluationCount()}]`,
     );
     return adsDecorator;
+  }
+  return facade;
+}
+
+function wrapWithEnterpriseJndiEjbResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (
+    JndiInitialContextFactoryBeanFactory.isInfrastructureInitialized() &&
+    RmiRegistryFactoryBeanFactory.isInfrastructureInitialized() &&
+    !EjbHomeFactoryBeanFactory.isInfrastructureInitialized()
+  ) {
+    const jndiContext: IJndiInitialContext | null = JndiInitialContextFactoryBeanFactory.getInitialContext();
+    const rmiRegistry = RmiRegistryFactoryBeanFactory.getRegistry();
+    const rmiRemote = FizzBuzzComputationRmiStubFactoryBeanFactory.createRemoteObject(facade);
+    if (rmiRegistry !== null) {
+      RmiRegistryFactoryBeanFactory.bindRemoteObject(
+        "FizzBuzzComputationRmiRemote",
+        rmiRemote,
+      );
+    }
+    const rmiStub = RmiRegistryFactoryBeanFactory.createStub("FizzBuzzComputationRmiRemote");
+    EjbHomeFactoryBeanFactory.initializeEjbInfrastructure(rmiStub, 3);
+    const ejbHome = EjbHomeFactoryBeanFactory.getHome();
+    if (ejbHome !== null) {
+      const ejbBinding = EjbJndiBindingFactoryBeanFactory.createBinding(
+        "ejb/fizzbuzz/ComputationEJB",
+        "com.enterprise.fizzbuzz.ejb.contracts.IEjbHome",
+        "com.enterprise.fizzbuzz.ejb.contracts.IEjbObject",
+        "com.enterprise.fizzbuzz.ejb.impl.FizzBuzzComputationEjbSessionBeanImpl",
+      );
+      if (jndiContext !== null) {
+        EjbJndiBindingFactoryBeanFactory.registerBindingWithJndi(ejbHome, ejbBinding, jndiContext);
+        const corbaRef: ICorbaObjectReference | null = CorbaNamingServiceFactoryBeanFactory.createObjectReference(
+          "IDL:com/enterprise/fizzbuzz/corba/FizzBuzzComputationEJB:1.0",
+          "FizzBuzzComputationEJB",
+          ejbHome,
+        );
+        const corbaNaming = CorbaNamingServiceFactoryBeanFactory.getNamingService();
+        if (corbaNaming !== null) {
+          corbaNaming.bind("ejb/fizzbuzz/ComputationEJB/corba", corbaRef);
+        }
+      }
+      EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory.initializeJndiEjbBridgeInfrastructure(ejbHome);
+    }
+    const ejbDecorator: IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator =
+      EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory.createJndiEjbAwareDecorator(
+        facade,
+        true,
+      );
+    console.debug(
+      `[EnterpriseJndiEjbResolution] Enterprise JNDI/EJB resolution decorator applied: ` +
+      `decorator=[${ejbDecorator.getDecoratorName()} v${ejbDecorator.getDecoratorVersion()}], ` +
+      `jndiPath=[${ejbDecorator.getJndiLookupPath()}], ` +
+      `ejbRoutingEnabled=[${ejbDecorator.isEjbRoutingEnabled()}], ` +
+      `ejbHome=[${EjbHomeFactoryBeanFactory.getHome()?.getHomeName() ?? "N/A"} ` +
+      `v${EjbHomeFactoryBeanFactory.getHome()?.getHomeVersion() ?? "N/A"}], ` +
+      `rmiStub=[${rmiStub.getStubName()} v${rmiStub.getStubVersion()}], ` +
+      `jndiBindings=[${jndiContext?.getRegisteredBindingNames().join(", ") ?? "N/A"}], ` +
+      `corbaBindings=[${CorbaNamingServiceFactoryBeanFactory.getNamingService()?.list().join(", ") ?? "N/A"}]`,
+    );
+    return ejbDecorator;
   }
   return facade;
 }

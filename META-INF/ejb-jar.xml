@@ -1,91 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ejb-jar PUBLIC "-//Sun Microsystems, Inc.//DTD Enterprise JavaBeans 2.0//EN" "http://java.sun.com/dtd/ejb-jar_2_0.dtd">
 <ejb-jar>
-  <display-name>FizzBuzz Enterprise Edition</display-name>
+  <display-name>FizzBuzzEnterpriseComputationEngine</display-name>
   <enterprise-beans>
-    <entity>
-      <display-name>FizzBuzzValue</display-name>
-      <ejb-name>FizzBuzzValue</ejb-name>
-      <home>IFizzBuzzEntityHome</home>
-      <remote>FizzBuzzEntityEJBObject</remote>
-      <local-home>IFizzBuzzEntityLocalHome</local-home>
-      <local>FizzBuzzEntityEJBLocalObject</local>
-      <ejb-class>FizzBuzzEntityBeanImpl</ejb-class>
-      <persistence-type>Container</persistence-type>
-      <prim-key-class>java.lang.Integer</prim-key-class>
-      <reentrant>False</reentrant>
-      <cmp-version>2.x</cmp-version>
-      <abstract-schema-name>FizzBuzzValue</abstract-schema-name>
-      <cmp-field>
-        <field-name>value</field-name>
-      </cmp-field>
-      <cmp-field>
-        <field-name>result</field-name>
-      </cmp-field>
-      <cmp-field>
-        <field-name>createdTimestamp</field-name>
-      </cmp-field>
-      <primkey-field>value</primkey-field>
-      <query>
-        <query-method>
-          <method-name>findAll</method-name>
-          <method-params/>
-        </query-method>
-        <ejb-ql>FIND ALL OBJECT(FizzBuzzValue)</ejb-ql>
-      </query>
-      <query>
-        <query-method>
-          <method-name>findByValue</method-name>
-          <method-params>
-            <method-param>int</method-param>
-          </method-params>
-        </query-method>
-        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY value</ejb-ql>
-      </query>
-      <query>
-        <query-method>
-          <method-name>findByResultContaining</method-name>
-          <method-params>
-            <method-param>java.lang.String</method-param>
-          </method-params>
-        </query-method>
-        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY result</ejb-ql>
-      </query>
-      <query>
-        <query-method>
-          <method-name>findByResultRange</method-name>
-          <method-params>
-            <method-param>int</method-param>
-            <method-param>int</method-param>
-          </method-params>
-        </query-method>
-        <ejb-ql>FIND OBJECT(FizzBuzzValue) BY range</ejb-ql>
-      </query>
-    </entity>
-    <message-driven>
-      <display-name>FizzBuzzComputationMDB</display-name>
-      <ejb-name>FizzBuzzComputationMDB</ejb-name>
-      <ejb-class>FizzBuzzComputationMessageDrivenBeanImpl</ejb-class>
+    <session>
+      <display-name>FizzBuzzComputationEJB</display-name>
+      <ejb-name>FizzBuzzComputationEJB</ejb-name>
+      <home>com.enterprise.fizzbuzz.ejb.contracts.IEjbHome</home>
+      <remote>com.enterprise.fizzbuzz.ejb.contracts.IEjbObject</remote>
+      <ejb-class>com.enterprise.fizzbuzz.ejb.impl.FizzBuzzComputationEjbSessionBeanImpl</ejb-class>
+      <session-type>Stateless</session-type>
       <transaction-type>Container</transaction-type>
-      <message-driven-destination>
-        <destination-type>javax.jms.Queue</destination-type>
-        <subscription-durability>NonDurable</subscription-durability>
-      </message-driven-destination>
+      <env-entry>
+        <env-entry-name>fizzbuzz/computation/divisor/three</env-entry-name>
+        <env-entry-type>java.lang.Integer</env-entry-type>
+        <env-entry-value>3</env-entry-value>
+      </env-entry>
+      <env-entry>
+        <env-entry-name>fizzbuzz/computation/divisor/five</env-entry-name>
+        <env-entry-type>java.lang.Integer</env-entry-type>
+        <env-entry-value>5</env-entry-value>
+      </env-entry>
       <resource-ref>
-        <res-ref-name>jms/FizzBuzzConnectionFactory</res-ref-name>
-        <res-type>javax.jms.ConnectionFactory</res-type>
+        <res-ref-name>jms/FizzBuzzComputationQueue</res-ref-name>
+        <res-type>javax.jms.Queue</res-type>
         <res-auth>Container</res-auth>
       </resource-ref>
-      <resource-env-ref>
-        <resource-env-ref-name>jms/queue/FizzBuzzComputationRequestQueue</resource-env-ref-name>
-        <resource-env-ref-type>javax.jms.Queue</resource-env-ref-type>
-      </resource-env-ref>
-    </message-driven>
+    </session>
   </enterprise-beans>
   <assembly-descriptor>
     <container-transaction>
       <method>
-        <ejb-name>FizzBuzzValue</ejb-name>
+        <ejb-name>FizzBuzzComputationEJB</ejb-name>
         <method-name>*</method-name>
       </method>
       <trans-attribute>Required</trans-attribute>
