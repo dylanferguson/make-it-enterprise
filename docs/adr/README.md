@@ -9,3 +9,4 @@ FizzBuzz Enterprise Edition project.
 - [ADR-0002: Service Locator Pattern](0002-service-locator-pattern.md)
 - [ADR-0003: Lifecycle Management Strategy](0003-lifecycle-management-strategy.md)
 - [ADR-0004: JCA Resource Adapter Integration](0004-jca-resource-adapter-integration.md)
+- [ADR-0007: Divisibility Evaluation Strategy Chain of Responsibility](0007-divisibility-evaluation-strategy-chain.md)

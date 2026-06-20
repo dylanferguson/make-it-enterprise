@@ -48,6 +48,12 @@ spec:
               value: "true"
             - name: FIZZBUZZ_APPLICATION_VERSION
               value: "2.0.0"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_CACHING_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_AUDIT_TRAIL_ENABLED
+              value: "true"
+            - name: FIZZBUZZ_EVALUATION_CHAIN_MAX_CACHE_SIZE
+              value: "1000"
           resources:
             requests:
               cpu: "250m"
