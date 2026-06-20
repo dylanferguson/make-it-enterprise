@@ -34,6 +34,8 @@ import { FizzBuzzEnterpriseServiceComponentValidatorImpl } from "../validators/F
 import type { IEnterpriseServiceComponentValidator } from "../../contracts/IEnterpriseServiceComponentValidator.js";
 import { StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean } from "../factories/StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean.js";
 import { SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory } from "../factories/SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.js";
+import { FizzBuzzExpressionRuleSetFactoryBeanFactory } from "../factories/FizzBuzzExpressionRuleSetFactoryBeanFactory.js";
+import type { IFizzBuzzExpressionEvaluator } from "../../contracts/IFizzBuzzExpressionEvaluator.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -67,9 +69,13 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     const templateMethodFrameworkProvider =
       StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean.createFrameworkProvider();
 
+    const expressionEvaluator: IFizzBuzzExpressionEvaluator =
+      FizzBuzzExpressionRuleSetFactoryBeanFactory.createExpressionEvaluator(outputFormatter);
+
     const strategyFactoryImpl = new FizzBuzzStrategyFactoryImpl(visitor, outputFormatter);
     strategyFactoryImpl.setDivisibilityStrategyProvider(divisibilityStrategyProvider);
     strategyFactoryImpl.setComponentValidator(componentValidator);
+    strategyFactoryImpl.setExpressionEvaluator(expressionEvaluator);
     const strategyFactory: IFizzBuzzStrategyFactory = strategyFactoryImpl;
 
     const handlerChain = new FizzBuzzHandlerChain(strategyFactory, outputFormatter);

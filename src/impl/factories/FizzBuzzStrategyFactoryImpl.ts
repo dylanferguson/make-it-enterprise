@@ -2,19 +2,30 @@ import { AbstractBaseFizzBuzzStrategyFactory } from "../../abstracts/AbstractBas
 import type { IFizzBuzzStrategy } from "../../contracts/IFizzBuzzStrategy.js";
 import type { IFizzBuzzVisitor } from "../../contracts/IFizzBuzzVisitor.js";
 import type { IFizzBuzzOutputFormatter } from "../../contracts/IFizzBuzzOutputFormatter.js";
+import type { IFizzBuzzExpressionEvaluator } from "../../contracts/IFizzBuzzExpressionEvaluator.js";
 import { FizzBuzzDivisibleByFifteenStrategy } from "../strategies/FizzBuzzDivisibleByFifteenStrategy.js";
 import { FizzBuzzDivisibleByThreeStrategy } from "../strategies/FizzBuzzDivisibleByThreeStrategy.js";
 import { FizzBuzzDivisibleByFiveStrategy } from "../strategies/FizzBuzzDivisibleByFiveStrategy.js";
 import { FizzBuzzDefaultValueStrategy } from "../strategies/FizzBuzzDefaultValueStrategy.js";
+import { ExpressionFilteringFizzBuzzStrategyDecorator } from "../decorators/ExpressionFilteringFizzBuzzStrategyDecorator.js";
 
 export class FizzBuzzStrategyFactoryImpl extends AbstractBaseFizzBuzzStrategyFactory {
   private readonly visitor: IFizzBuzzVisitor;
   private readonly formatter: IFizzBuzzOutputFormatter;
+  private expressionEvaluator: IFizzBuzzExpressionEvaluator | null = null;
 
   constructor(visitor: IFizzBuzzVisitor, formatter: IFizzBuzzOutputFormatter) {
     super();
     this.visitor = visitor;
     this.formatter = formatter;
+  }
+
+  setExpressionEvaluator(evaluator: IFizzBuzzExpressionEvaluator | null): void {
+    this.expressionEvaluator = evaluator;
+  }
+
+  getExpressionEvaluator(): IFizzBuzzExpressionEvaluator | null {
+    return this.expressionEvaluator;
   }
 
   override createStrategies(): readonly IFizzBuzzStrategy[] {
@@ -27,6 +38,12 @@ export class FizzBuzzStrategyFactoryImpl extends AbstractBaseFizzBuzzStrategyFac
     for (const strategy of rawStrategies) {
       this.applyCrossCuttingConcerns(strategy);
     }
-    return this.sortByPriority(rawStrategies);
+    const sorted = this.sortByPriority(rawStrategies);
+    if (this.expressionEvaluator !== null) {
+      return sorted.map(
+        (s) => new ExpressionFilteringFizzBuzzStrategyDecorator(s, this.expressionEvaluator!),
+      );
+    }
+    return sorted;
   }
 }
