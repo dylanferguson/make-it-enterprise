@@ -18,8 +18,8 @@ services:
         {
           "autoupdate": false,
           "enabled_providers": ["opencode"],
-          "model": "opencode/deepseek-v4-flash-free",
-          "small_model": "opencode/deepseek-v4-flash-free",
+          "model": "opencode/deepseek-v4-flash",
+          "small_model": "opencode/deepseek-v4-flash",
           "share": "disabled",
           "permission": {
             "*": "allow",
@@ -38,7 +38,7 @@ services:
             "ignore": ["node_modules/**", "dist/**", ".git/**"]
           }
         }
-      OPENCODE_MODEL: "${OPENCODE_MODEL:-opencode/deepseek-v4-flash-free}"
+      OPENCODE_MODEL: "${OPENCODE_MODEL:-}"
       PNPM_STORE_DIR: /home/agent/.cache/pnpm
     init: true
     mem_limit: 4g
