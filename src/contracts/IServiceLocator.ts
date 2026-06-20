@@ -5,6 +5,7 @@ import type { ICompositeValueResolver } from "./ICompositeValueResolver.js";
 import type { IRangeCalculator } from "./IRangeCalculator.js";
 import type { IModuloEvaluationStrategyProvider } from "./IModuloEvaluationStrategyProvider.js";
 import type { IModuloArithmeticStrategyProvider } from "./IModuloArithmeticStrategyProvider.js";
+import type { IRemainderComputationSupervisor } from "./IRemainderComputationSupervisor.js";
 
 export interface IServiceLocator {
   getDivisibilityEvaluator(): IDivisibilityEvaluator;
@@ -14,4 +15,5 @@ export interface IServiceLocator {
   getRangeCalculator(): IRangeCalculator;
   getModuloEvaluationStrategyProvider(): IModuloEvaluationStrategyProvider;
   getModuloArithmeticStrategyProvider(): IModuloArithmeticStrategyProvider;
+  getRemainderComputationSupervisor(): IRemainderComputationSupervisor;
 }

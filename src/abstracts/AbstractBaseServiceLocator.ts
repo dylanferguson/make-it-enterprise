@@ -10,6 +10,7 @@ export abstract class AbstractBaseServiceLocator implements IServiceLocator {
   abstract getRangeCalculator(): ReturnType<IServiceLocator["getRangeCalculator"]>;
   abstract getModuloEvaluationStrategyProvider(): ReturnType<IServiceLocator["getModuloEvaluationStrategyProvider"]>;
   abstract getModuloArithmeticStrategyProvider(): ReturnType<IServiceLocator["getModuloArithmeticStrategyProvider"]>;
+  abstract getRemainderComputationSupervisor(): ReturnType<IServiceLocator["getRemainderComputationSupervisor"]>;
 
   protected ensureInitialized(): void {
     if (!this.initialized) {

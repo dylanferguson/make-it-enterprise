@@ -6,6 +6,7 @@ import type { ICompositeValueResolver } from "../../contracts/ICompositeValueRes
 import type { IRangeCalculator } from "../../contracts/IRangeCalculator.js";
 import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
 import type { IModuloEvaluationStrategyProvider } from "../../contracts/IModuloEvaluationStrategyProvider.js";
+import type { IRemainderComputationSupervisor } from "../../contracts/IRemainderComputationSupervisor.js";
 import type { IStrategyRegistry } from "../../contracts/IStrategyRegistry.js";
 import type { IFizzBuzzSessionManager } from "../../contracts/IFizzBuzzSessionManager.js";
 import type { IResultPostProcessorChain } from "../../contracts/IResultPostProcessorChain.js";
@@ -32,6 +33,7 @@ import type { IDivisibilityStrategyProvider } from "../../contracts/IDivisibilit
 import { FizzBuzzEnterpriseServiceComponentValidatorImpl } from "../validators/FizzBuzzEnterpriseServiceComponentValidatorImpl.js";
 import type { IEnterpriseServiceComponentValidator } from "../../contracts/IEnterpriseServiceComponentValidator.js";
 import { StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean } from "../factories/StandardModuloOperationTemplateMethodFrameworkProviderFactoryBean.js";
+import { SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory } from "../factories/SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -39,11 +41,15 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     typeof ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean
   > | null = null;
   private moduloArithmeticStrategyProvider: ModuloArithmeticStrategyProviderImpl | null = null;
+  private remainderComputationSupervisor: IRemainderComputationSupervisor | null = null;
 
   override initialize(): void {
+    this.remainderComputationSupervisor =
+      SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.createSingletonSupervisedDecoratedDelegationService();
     this.moduloEvaluationStrategyFactoryBean =
       ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean(
         "FizzBuzzServiceLocatorModuloEvaluationStrategyFactoryBean",
+        this.remainderComputationSupervisor,
       );
     const evaluationStrategyProvider: IModuloEvaluationStrategyProvider =
       this.moduloEvaluationStrategyFactoryBean.createProvider();
@@ -151,5 +157,15 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
       );
     }
     return this.moduloArithmeticStrategyProvider;
+  }
+
+  override getRemainderComputationSupervisor(): IRemainderComputationSupervisor {
+    this.ensureInitialized();
+    if (this.remainderComputationSupervisor === null) {
+      throw new Error(
+        "RemainderComputationSupervisor not initialized in ServiceLocatorImpl",
+      );
+    }
+    return this.remainderComputationSupervisor;
   }
 }

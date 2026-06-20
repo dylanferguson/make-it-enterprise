@@ -1,18 +1,20 @@
 import { AbstractBaseModuloEvaluationStrategy } from "../../abstracts/AbstractBaseModuloEvaluationStrategy.js";
-import type { IRemainderOperatorDelegationService } from "../../contracts/IRemainderOperatorDelegationService.js";
-import { StandardRemainderOperatorDelegationServiceImpl } from "../services/StandardRemainderOperatorDelegationServiceImpl.js";
+import type { IRemainderComputationSupervisor } from "../../contracts/IRemainderComputationSupervisor.js";
+import { SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory } from "../factories/SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.js";
 
 export class StandardRemainderModuloEvaluationStrategyImpl extends AbstractBaseModuloEvaluationStrategy {
-  private static readonly STRATEGY_VERSION = "1.2.0-RELEASE";
+  private static readonly STRATEGY_VERSION = "2.0.0-ENTERPRISE";
   private static readonly STRATEGY_NAME = "StandardRemainderModuloEvaluationStrategy";
-  private readonly remainderOperatorDelegationService: IRemainderOperatorDelegationService;
+  private static readonly COMPUTATION_CONTEXT = "MODULO_EVALUATION";
+  private readonly remainderComputationSupervisor: IRemainderComputationSupervisor;
 
   constructor(
-    remainderOperatorDelegationService?: IRemainderOperatorDelegationService,
+    remainderComputationSupervisor?: IRemainderComputationSupervisor,
   ) {
     super();
-    this.remainderOperatorDelegationService =
-      remainderOperatorDelegationService ?? new StandardRemainderOperatorDelegationServiceImpl();
+    this.remainderComputationSupervisor =
+      remainderComputationSupervisor ??
+      SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.createSupervisedDecoratedDelegationService();
   }
 
   override evaluateModulo(dividend: number, divisor: number): number {
@@ -31,13 +33,18 @@ export class StandardRemainderModuloEvaluationStrategyImpl extends AbstractBaseM
     return divisor > 0 && Number.isInteger(divisor);
   }
 
+  getRemainderComputationSupervisor(): IRemainderComputationSupervisor {
+    return this.remainderComputationSupervisor;
+  }
+
   protected override doEvaluate(
     truncatedDividend: number,
     truncatedDivisor: number,
   ): number {
-    return this.remainderOperatorDelegationService.computeRemainder(
+    return this.remainderComputationSupervisor.superviseRemainderComputation(
       truncatedDividend,
       truncatedDivisor,
+      StandardRemainderModuloEvaluationStrategyImpl.COMPUTATION_CONTEXT,
     );
   }
 
