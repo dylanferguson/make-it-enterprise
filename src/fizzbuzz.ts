@@ -234,6 +234,11 @@ import { ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFact
 import { EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory } from "./enterpriseresolutionlifecycle/factories/EnterpriseComputationResolutionLifecycleOrchestratorFactoryBeanFactory.js";
 import type { IEnterpriseComputationResolutionLifecycleOrchestrator } from "./enterpriseresolutionlifecycle/contracts/IEnterpriseComputationResolutionLifecycleOrchestrator.js";
 
+import { EnterpriseFizzBuzzComputationBridgeFactoryBeanFactory } from "./bridge/factories/EnterpriseFizzBuzzComputationBridgeFactoryBeanFactory.js";
+import { ComputationTypeFlyweightFactoryFactoryBeanFactory } from "./flyweight/factories/ComputationTypeFlyweightFactoryFactoryBeanFactory.js";
+import { ComputationPrototypeRegistryFactoryBeanFactory } from "./prototype/factories/ComputationPrototypeRegistryFactoryBeanFactory.js";
+import { EnterpriseFizzBuzzPatternIntegrationFacadeFactoryBeanFactory } from "./bridge/factories/EnterpriseFizzBuzzPatternIntegrationFacadeFactoryBeanFactory.js";
+
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
 
@@ -1053,6 +1058,27 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `validators=[${lifecycleOrchestrator.getRegisteredValidators().length}], ` +
       `chainHead=[${lifecycleOrchestrator.getChainHead()?.getHandlerName() ?? "null"} v${lifecycleOrchestrator.getChainHead()?.getHandlerVersion() ?? "N/A"}], ` +
       `history=[${lifecycleOrchestrator.getStateTransitionHistory().join(" -> ") || "empty"}]`,
+    );
+  }
+  {
+    const bridgeImplementor = EnterpriseFizzBuzzComputationBridgeFactoryBeanFactory.createDefaultImplementor();
+    const bridgeAbstraction = EnterpriseFizzBuzzComputationBridgeFactoryBeanFactory.createDefaultBridgeAbstraction();
+    const flyweightInfrastructure = ComputationTypeFlyweightFactoryFactoryBeanFactory.initializeFlyweightInfrastructure();
+    const prototypeRegistry = ComputationPrototypeRegistryFactoryBeanFactory.initializePrototypeInfrastructure();
+    const patternIntegration = EnterpriseFizzBuzzPatternIntegrationFacadeFactoryBeanFactory.initializePatternIntegrationInfrastructure();
+    console.debug(
+      `[BridgeFlyweightPrototypeInfrastructure] Enterprise GoF pattern integration infrastructure initialized: ` +
+      `bridge=[${bridgeAbstraction.getBridgeName()} v${bridgeAbstraction.getBridgeVersion()}], ` +
+      `bridgeImplementor=[${bridgeImplementor.getImplementorName()} v${bridgeImplementor.getImplementorVersion()}], ` +
+      `flyweightFactory=[${flyweightInfrastructure.factory.getFactoryName()} v${flyweightInfrastructure.factory.getFactoryVersion()}], ` +
+      `flyweightRegistry=[${flyweightInfrastructure.registry.getRegistryName()} v${flyweightInfrastructure.registry.getRegistryVersion()}], ` +
+      `flyweightTypes=[${flyweightInfrastructure.factory.getCachedFlyweights().map((f) => f.getTypeIdentifier()).join(", ")}], ` +
+      `flyweightCacheSize=[${flyweightInfrastructure.factory.getCacheSize()}], ` +
+      `prototypeRegistry=[${prototypeRegistry.getRegistryName()} v${prototypeRegistry.getRegistryVersion()}], ` +
+      `prototypes=[${prototypeRegistry.getRegisteredIdentifiers().join(", ")}], ` +
+      `prototypeCount=[${prototypeRegistry.getPrototypeCount()}], ` +
+      `patternFacade=[${patternIntegration.facade.getIntegrationName()} v${patternIntegration.facade.getIntegrationVersion()}], ` +
+      `patternBridge=[${patternIntegration.bridge.getBridgeName()} v${patternIntegration.bridge.getBridgeVersion()}]`,
     );
   }
   return true;
