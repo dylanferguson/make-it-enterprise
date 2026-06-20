@@ -11,6 +11,7 @@ import type { ICompositeValueResolver } from "../contracts/ICompositeValueResolv
 import type { IComputationEventNotificationBus } from "../contracts/IComputationEventNotificationBus.js";
 import type { IFizzBuzzComputationBridge } from "../contracts/IFizzBuzzComputationBridge.js";
 import type { IFizzBuzzComputationMediator } from "../contracts/IFizzBuzzComputationMediator.js";
+import type { IPipeline } from "../contracts/IPipeline.js";
 import { XmlDeploymentDescriptorReaderImpl } from "../impl/descriptors/XmlDeploymentDescriptorReaderImpl.js";
 import { DefaultStrategySelectorFactoryImpl } from "../impl/factories/DefaultStrategySelectorFactoryImpl.js";
 import { FizzBuzzTransactionManagerImpl } from "../impl/transactions/FizzBuzzTransactionManagerImpl.js";
@@ -31,6 +32,7 @@ import { FizzBuzzManagedConnectionFactoryImpl } from "../impl/resource/FizzBuzzR
 import { FizzBuzzPropertyPlaceholderConfigurerImpl } from "../impl/config/FizzBuzzPropertyPlaceholderConfigurerImpl.js";
 import type { ILifecycleManager } from "../contracts/ILifecycleManager.js";
 import type { IResourceAdapter } from "../contracts/IResourceAdapter.js";
+import { EnterpriseFizzBuzzPipelineFactoryBeanFactory, FizzBuzzPipelineConfigurationProfile } from "../impl/factories/EnterpriseFizzBuzzPipelineFactoryBean.js";
 
 export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
   private static instance: FizzBuzzEnterpriseService | null = null;
@@ -145,9 +147,20 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
       );
       const mediator: IFizzBuzzComputationMediator = mediatorFactoryBean.createMediator();
 
+      const pipelineFactoryBean = EnterpriseFizzBuzzPipelineFactoryBeanFactory.createFactoryBean(
+        mediator,
+        eventBus,
+        [...enterpriseContext.getInterceptors()],
+        fallbackDecorator,
+        enterpriseContext.getResultPostProcessorChain(),
+        FizzBuzzPipelineConfigurationProfile.FULL,
+      );
+      const pipeline: IPipeline<number, string> = pipelineFactoryBean.createPipeline();
+
       FizzBuzzEnterpriseServiceFactoryBeanFactory.instance = new FizzBuzzEnterpriseService(
         mediator,
         eventBus,
+        pipeline,
         serviceHome,
         transactionManager,
         deploymentDescriptorReader,
@@ -238,6 +251,7 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
 export class FizzBuzzEnterpriseService {
   private readonly mediator: IFizzBuzzComputationMediator;
   private readonly eventBus: IComputationEventNotificationBus;
+  private readonly pipeline: IPipeline<number, string> | null;
   private readonly serviceHome: object | null;
   private readonly transactionManager: object | null;
   private readonly deploymentDescriptorReader: object | null;
@@ -250,6 +264,7 @@ export class FizzBuzzEnterpriseService {
   constructor(
     mediator: IFizzBuzzComputationMediator,
     eventBus: IComputationEventNotificationBus,
+    pipeline: IPipeline<number, string> | null = null,
     serviceHome: object | null = null,
     transactionManager: object | null = null,
     deploymentDescriptorReader: object | null = null,
@@ -258,6 +273,7 @@ export class FizzBuzzEnterpriseService {
   ) {
     this.mediator = mediator;
     this.eventBus = eventBus;
+    this.pipeline = pipeline;
     this.serviceHome = serviceHome;
     this.transactionManager = transactionManager;
     this.deploymentDescriptorReader = deploymentDescriptorReader;
@@ -285,7 +301,9 @@ export class FizzBuzzEnterpriseService {
 
   resolveValue(value: number): string {
     const startTime = performance.now();
-    const result = this.mediator.mediateValueResolution(value);
+    const result = this.pipeline !== null
+      ? this.pipeline.execute(value)
+      : this.mediator.mediateValueResolution(value);
     const durationMs = performance.now() - startTime;
     const event = new ValueResolvedComputationEventImpl(
       "FizzBuzzEnterpriseService",
@@ -299,7 +317,16 @@ export class FizzBuzzEnterpriseService {
 
   calculateRange(start: number, end: number): readonly string[] {
     const rangeStartTime = performance.now();
-    const results = this.mediator.mediateRangeCalculation(start, end);
+    let results: readonly string[];
+    if (this.pipeline !== null) {
+      const mutableResults: string[] = [];
+      for (let i = start; i <= end; i++) {
+        mutableResults.push(this.pipeline.execute(i));
+      }
+      results = mutableResults;
+    } else {
+      results = this.mediator.mediateRangeCalculation(start, end);
+    }
     const totalDurationMs = performance.now() - rangeStartTime;
     const rangeEvent = new RangeComputationCompletedEventImpl(
       "FizzBuzzEnterpriseService",
