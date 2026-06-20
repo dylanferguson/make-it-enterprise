@@ -151,6 +151,8 @@ import { CorbaNamingServiceFactoryBeanFactory } from "./corba/factories/CorbaNam
 import type { ICorbaObjectReference } from "./corba/contracts/ICorbaObjectReference.js";
 import { EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory } from "./impl/factories/EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory.js";
 import type { IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator } from "./contracts/IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator.js";
+import { FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory, FizzBuzzEnterpriseServiceEndpointConfigurationProfile } from "./endpoint/factories/FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.js";
+import { FizzBuzzEndpointAwareServiceActivatorImpl } from "./endpoint/FizzBuzzEndpointAwareServiceActivatorImpl.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -1166,16 +1168,42 @@ function resolvePipelineManagerResolutionStrategySelector(): IPipelineManagerRes
   return pipelineManagerResolutionStrategySelector!;
 }
 
-export function fizzBuzzValue(value: number): string {
+function resolvePipelineManagerViaResolutionStrategy(): IFizzBuzzPipelineManager {
   const resolutionStrategySelector = resolvePipelineManagerResolutionStrategySelector();
   const resolutionStrategy = resolutionStrategySelector.selectPipelineManagerResolutionStrategy();
-  const manager = resolutionStrategy.resolvePipelineManager();
-  return manager.executeSingleValuePipeline(value);
+  return resolutionStrategy.resolvePipelineManager();
+}
+
+let endpointServiceActivator: FizzBuzzEndpointAwareServiceActivatorImpl | null = null;
+
+function resolveEndpointServiceActivator(): FizzBuzzEndpointAwareServiceActivatorImpl {
+  if (endpointServiceActivator === null) {
+    const managerResolver = () => resolvePipelineManagerViaResolutionStrategy();
+    if (!FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.isEndpointInfrastructureInitialized()) {
+      FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.createEndpoint(
+        managerResolver,
+        FizzBuzzEnterpriseServiceEndpointConfigurationProfile.FULLY_INSTRUMENTED,
+      );
+    }
+    const endpoint = FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.getEndpoint()!;
+    const dispatcher = FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.getDispatcher()!;
+    endpointServiceActivator = new FizzBuzzEndpointAwareServiceActivatorImpl(dispatcher, endpoint);
+    console.debug(
+      `[EndpointServiceActivatorResolution] Endpoint service activator resolved: ` +
+      `activator=[${endpointServiceActivator.getActivatorName()} v${endpointServiceActivator.getActivatorVersion()}], ` +
+      `endpoint=[${endpoint.getEndpointName()} v${endpoint.getEndpointVersion()}], ` +
+      `dispatchProtocol=[${dispatcher.getDispatchProtocol()}]`,
+    );
+  }
+  return endpointServiceActivator!;
+}
+
+export function fizzBuzzValue(value: number): string {
+  const activator = resolveEndpointServiceActivator();
+  return activator.activateSingleValueResolution(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const resolutionStrategySelector = resolvePipelineManagerResolutionStrategySelector();
-  const resolutionStrategy = resolutionStrategySelector.selectPipelineManagerResolutionStrategy();
-  const manager = resolutionStrategy.resolvePipelineManager();
-  return manager.executeRangePipeline(start, end);
+  const activator = resolveEndpointServiceActivator();
+  return activator.activateRangeResolution(start, end);
 }
