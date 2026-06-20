@@ -103,6 +103,7 @@ import { EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory } from ".
 import { DivisibilityExpressionFactoryBeanFactory } from "./expressionengine/factories/DivisibilityExpressionFactoryBeanFactory.js";
 import { AopInfrastructureFactoryBeanFactory as AopInfrastructureBeanFactory } from "./aop/factories/AopInfrastructureFactoryBeanFactory.js";
 import { AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory } from "./aop/factories/AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory } from "./execution/factories/ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -618,7 +619,18 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     );
     return aopDecorator;
   }
-  return baseDocumentAwareDecorator;
+  const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
+    baseDocumentAwareDecorator,
+    true,
+    200,
+  );
+  console.debug(
+    `[ExecutionCoordinatorAwareDecorator] Execution coordinator-aware facade decorator applied: ` +
+    `facade=[${executionCoordinatorAwareFacade.getFacadeName()} v${executionCoordinatorAwareFacade.getFacadeVersion()}], ` +
+    `coordinatorEngaged=[${executionCoordinatorAwareFacade.isCoordinatorEngaged()}], ` +
+    `strategies=[${executionCoordinatorAwareFacade.getExecutionCoordinator().getRegisteredExecutionStrategies().join(", ")}]`,
+  );
+  return executionCoordinatorAwareFacade;
 }
 
 let mdbCallbackRegistered = false;
