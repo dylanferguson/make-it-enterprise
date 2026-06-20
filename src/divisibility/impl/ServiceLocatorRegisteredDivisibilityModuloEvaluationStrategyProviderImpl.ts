@@ -1,20 +1,31 @@
 import { AbstractBaseDivisibilityModuloEvaluationStrategyProvider } from "../abstracts/AbstractBaseDivisibilityModuloEvaluationStrategyProvider.js";
 import type { IDivisibilityModuloEvaluationFactoryBean } from "../contracts/IDivisibilityModuloEvaluationFactoryBean.js";
 import type { IDivisibilityModuloEvaluationChainHandler } from "../contracts/IDivisibilityModuloEvaluationChainHandler.js";
+import { RemainderComputationStrategyProviderFactoryBeanFactory } from "../../operators/impl/factories/RemainderComputationStrategyProviderFactoryBeanFactory.js";
+import type { IRemainderComputationStrategyProvider } from "../../operators/contracts/IRemainderComputationStrategyProvider.js";
 
 export class ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl
   extends AbstractBaseDivisibilityModuloEvaluationStrategyProvider
 {
   private static readonly PROVIDER_NAME = "ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProvider";
-  private static readonly PROVIDER_VERSION = "1.0.0-SERVICE-LOCATOR-PROVIDER";
+  private static readonly PROVIDER_VERSION = "1.1.0-ENTERPRISE-STRATEGY-PROVIDER-FALLBACK";
 
   private resolutionCount: number = 0;
+  private static remainderProvider: IRemainderComputationStrategyProvider | null = null;
 
   constructor() {
     super(
       ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl.PROVIDER_NAME,
       ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl.PROVIDER_VERSION,
     );
+  }
+
+  private ensureRemainderProvider(): IRemainderComputationStrategyProvider {
+    if (ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl.remainderProvider === null) {
+      ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl.remainderProvider =
+        RemainderComputationStrategyProviderFactoryBeanFactory.createProvider();
+    }
+    return ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProviderImpl.remainderProvider;
   }
 
   override resolveStrategyProvider(dividend: number, divisor: number, context: string | null): number {
@@ -29,7 +40,8 @@ export class ServiceLocatorRegisteredDivisibilityModuloEvaluationStrategyProvide
     if (chainHandler !== null) {
       return chainHandler.handleModuloEvaluation(dividend, divisor, context);
     }
-    return dividend % divisor;
+    const provider = this.ensureRemainderProvider();
+    return provider.resolveRemainder(dividend, divisor);
   }
 
   override resolveFactoryBean(divisor: number): IDivisibilityModuloEvaluationFactoryBean | null {
