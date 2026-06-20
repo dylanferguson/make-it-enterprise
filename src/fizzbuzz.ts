@@ -214,6 +214,11 @@ import { FizzBuzzComputationOriginatorFactoryBeanFactory } from "./workflowmemen
 import { FizzBuzzComputationCaretakerFactoryBeanFactory } from "./workflowmemento/factories/FizzBuzzComputationCaretakerFactoryBeanFactory.js";
 import type { IFizzBuzzComputationOriginator } from "./workflowmemento/contracts/IFizzBuzzComputationOriginator.js";
 import type { IFizzBuzzComputationCaretaker } from "./workflowmemento/contracts/IFizzBuzzComputationCaretaker.js";
+import { EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory.js";
+import { EnterpriseDivisibilityEvaluationInterceptorAdapterConfigurerFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterConfigurerFactoryBeanFactory.js";
+import { EnterpriseDivisibilityEvaluationInterceptorAdapterVisitorFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterVisitorFactoryBeanFactory.js";
+import { EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory } from "./divisibilityinterceptoradapter/factories/EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecorator } from "./divisibilityinterceptoradapter/contracts/IEnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -916,6 +921,33 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory.isInfrastructureInitialized()) {
+      const interceptorAdapter =
+        EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory.initializeAdapterInfrastructure();
+      const configurer =
+        EnterpriseDivisibilityEvaluationInterceptorAdapterConfigurerFactoryBeanFactory.createConfigurer();
+      const visitor =
+        EnterpriseDivisibilityEvaluationInterceptorAdapterVisitorFactoryBeanFactory.createVisitor();
+      visitor.visitAdapterRegistration(interceptorAdapter, 3);
+      visitor.visitAdapterRegistration(interceptorAdapter, 5);
+      configurer.configureAdapter(
+        interceptorAdapter,
+        "STANDARD_INTERCEPTOR_ADAPTER",
+      );
+      const configurationValid = configurer.validateAdapterConfiguration(interceptorAdapter);
+      console.debug(
+        `[EnterpriseDivisibilityEvaluationInterceptorAdapterInfrastructure] Enterprise divisibility evaluation interceptor adapter infrastructure initialized: ` +
+        `adapter=[${interceptorAdapter.getAdapterName()} v${interceptorAdapter.getAdapterVersion()}], ` +
+        `configurer=[${configurer.getConfigurerName()} v${configurer.getConfigurerVersion()}], ` +
+        `visitor=[${visitor.getVisitorName()} v${visitor.getVisitorVersion()}], ` +
+        `registeredDivisors=[${interceptorAdapter.getRegisteredDivisors().join(", ")}], ` +
+        `configurationValid=[${configurationValid}], ` +
+        `visitationCount=[${visitor.getVisitationCount()}], ` +
+        `invocationCount=[${interceptorAdapter.getAdapterInvocationCount()}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -1196,7 +1228,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
     const mediated = wrapWithMediatorResolution(proxied);
-    return wrapWithFormatterBridgeResolution(mediated);
+    const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
+    return wrapWithFormatterBridgeResolution(interceptorAdapted);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1224,7 +1257,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const orchestrated = wrapWithEnterpriseDivisibilityOrchestration(jaasWrapped);
     const proxied = wrapWithInvocationProxyResolution(orchestrated);
     const mediated = wrapWithMediatorResolution(proxied);
-    return wrapWithFormatterBridgeResolution(mediated);
+    const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
+    return wrapWithFormatterBridgeResolution(interceptorAdapted);
 }
 
 let mediatorDecorator: IMediatorAwareResolutionFacadeDecorator | null = null;
@@ -1270,6 +1304,33 @@ function wrapWithMediatorResolution(
       `decoratorEnabled=[${mediatorDecorator.isDecoratorEnabled()}]`,
     );
     return mediatorDecorator;
+  }
+  return facade;
+}
+
+let interceptorAdapterDecorator: IEnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecorator | null = null;
+
+function wrapWithInterceptorAdapterResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory.isInfrastructureInitialized()) {
+    if (interceptorAdapterDecorator === null) {
+      const adapter = EnterpriseDivisibilityEvaluationInterceptorAdapterFactoryBeanFactory.getAdapter()!;
+      interceptorAdapterDecorator =
+        EnterpriseDivisibilityEvaluationInterceptorAdapterResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+          facade,
+        );
+      console.debug(
+        `[InterceptorAdapterResolutionDecorator] Enterprise divisibility evaluation interceptor adapter resolution facade decorator applied: ` +
+        `decorator=[${interceptorAdapterDecorator.getDecoratorName()} v${interceptorAdapterDecorator.getDecoratorVersion()}], ` +
+        `wrappedFacade=[${interceptorAdapterDecorator.getWrappedFacade().getFacadeName()}], ` +
+        `adapter=[${interceptorAdapterDecorator.getInterceptorAdapter().getAdapterName()} v${interceptorAdapterDecorator.getInterceptorAdapter().getAdapterVersion()}], ` +
+        `interceptionCount=[${interceptorAdapterDecorator.getDecoratorInterceptionCount()}], ` +
+        `registeredDivisors=[${interceptorAdapterDecorator.getInterceptorAdapter().getRegisteredDivisors().join(", ")}], ` +
+        `decoratorEnabled=[${interceptorAdapterDecorator.isInterceptorAdapterEnabled()}]`,
+      );
+    }
+    return interceptorAdapterDecorator;
   }
   return facade;
 }
