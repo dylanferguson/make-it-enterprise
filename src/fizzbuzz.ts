@@ -155,6 +155,10 @@ import { FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory, FizzBuzzEnterprise
 import { FizzBuzzEndpointAwareServiceActivatorImpl } from "./endpoint/FizzBuzzEndpointAwareServiceActivatorImpl.js";
 import { ComputationResultPostProcessorArchitectureFactoryBeanFactory } from "./resultpostprocessing/factories/ComputationResultPostProcessorArchitectureFactoryBeanFactory.js";
 import { PostProcessorAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./resultpostprocessing/factories/PostProcessorAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseStrategyLookupServiceFactoryBeanFactory } from "./strategylookupservice/factories/EnterpriseStrategyLookupServiceFactoryBeanFactory.js";
+import { EnterpriseStrategyLookupServiceManagedAdapterFactoryFactoryBeanFactory } from "./strategylookupservice/factories/EnterpriseStrategyLookupServiceManagedAdapterFactoryFactoryBeanFactory.js";
+import { EnterpriseStrategyLookupServiceAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./strategylookupservice/factories/EnterpriseStrategyLookupServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseStrategyLookupService } from "./strategylookupservice/contracts/IEnterpriseStrategyLookupService.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -653,6 +657,34 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseStrategyLookupServiceFactoryBeanFactory.isInfrastructureInitialized()) {
+      const strategyLookupService =
+        EnterpriseStrategyLookupServiceFactoryBeanFactory.initializeLookupService();
+      const adapterFactory =
+        EnterpriseStrategyLookupServiceManagedAdapterFactoryFactoryBeanFactory.initializeAdapterFactory();
+      const divisibilityProvider = AbstractDivisibilityStrategyProviderFactoryBeanFactory.getProvider();
+      if (divisibilityProvider !== null) {
+        const registeredDivisors = divisibilityProvider.getRegisteredDivisors();
+        for (const divisor of registeredDivisors) {
+          const factoryBean = divisibilityProvider.resolveDivisibilityStrategyFactoryBean(divisor);
+          strategyLookupService.registerStrategyProvider(
+            `divisibility:${divisor}`,
+            factoryBean,
+            factoryBean.getFactoryBeanVersion(),
+          );
+        }
+      }
+      console.debug(
+        `[StrategyLookupServiceInfrastructure] Enterprise strategy lookup service infrastructure initialized: ` +
+        `service=[${strategyLookupService.getLookupServiceName()} v${strategyLookupService.getLookupServiceVersion()}], ` +
+        `adapterFactory=[${adapterFactory.getAdapterFactoryName()} v${adapterFactory.getAdapterFactoryVersion()}], ` +
+        `registeredStrategies=[${strategyLookupService.getRegisteredStrategyNames().join(", ")}], ` +
+        `strategyCount=[${strategyLookupService.getStrategyProviderCount()}], ` +
+        `adapterTypes=[${adapterFactory.getSupportedAdapterTypes().join(", ")}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -923,7 +955,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const txAwareDecorator = wrapWithTransactionPropagation(stateMachineAware);
     const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
     const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
-    return wrapWithPostProcessorResolution(jndiDecorated);
+    const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
+    return wrapWithStrategyLookupServiceResolution(postProcessed);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -941,7 +974,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const transactionAware = wrapWithTransactionPropagation(stateMachineAware);
   const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
   const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
-  return wrapWithPostProcessorResolution(jndiDecorated);
+  const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
+  return wrapWithStrategyLookupServiceResolution(postProcessed);
 }
 
 function wrapWithAbstractDivisibilityStrategyResolution(
@@ -1043,6 +1077,34 @@ function wrapWithPostProcessorResolution(
       `enabled=[${postProcessorDecorator.isDecoratorEnabled()}]`,
     );
     return postProcessorDecorator;
+  }
+  return facade;
+}
+
+let strategyLookupService: IEnterpriseStrategyLookupService | null = null;
+
+function wrapWithStrategyLookupServiceResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseStrategyLookupServiceFactoryBeanFactory.isInfrastructureInitialized()) {
+    if (strategyLookupService === null) {
+      strategyLookupService = EnterpriseStrategyLookupServiceFactoryBeanFactory.getLookupService();
+    }
+    const lookupServiceDecorator =
+      EnterpriseStrategyLookupServiceAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        strategyLookupService!,
+      );
+    console.debug(
+      `[StrategyLookupServiceResolutionDecorator] Strategy lookup service resolution decorator applied: ` +
+      `decorator=[${lookupServiceDecorator.getDecoratorName()} v${lookupServiceDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${lookupServiceDecorator.getWrappedFacadeName()}], ` +
+      `lookupService=[${strategyLookupService!.getLookupServiceName()} v${strategyLookupService!.getLookupServiceVersion()}], ` +
+      `registeredStrategies=[${strategyLookupService!.getRegisteredStrategyNames().join(", ")}], ` +
+      `registrationCount=[${lookupServiceDecorator.getLookupServiceRegistrationCount()}], ` +
+      `decoratorEnabled=[${lookupServiceDecorator.isDecoratorEnabled()}]`,
+    );
+    return lookupServiceDecorator;
   }
   return facade;
 }
