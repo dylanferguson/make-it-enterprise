@@ -101,6 +101,8 @@ import type { IModularArithmeticDivisibilityResolutionMediationVisitor } from ".
 import { EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionEvaluatorRegistryFactoryBeanFactory.js";
 import { EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory } from "./expressionengine/factories/EnterpriseDivisibilityExpressionInterpreterFactoryBeanFactory.js";
 import { DivisibilityExpressionFactoryBeanFactory } from "./expressionengine/factories/DivisibilityExpressionFactoryBeanFactory.js";
+import { AopInfrastructureFactoryBeanFactory as AopInfrastructureBeanFactory } from "./aop/factories/AopInfrastructureFactoryBeanFactory.js";
+import { AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory } from "./aop/factories/AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -371,6 +373,23 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `jobInstance=[${config.getJobInstanceName()}]`,
     );
   }
+  {
+    if (!AopInfrastructureBeanFactory.isInfrastructureInitialized()) {
+      const aopProvider = AopInfrastructureBeanFactory.initializeInfrastructure();
+      const aopWeaver = AopInfrastructureBeanFactory.getWeaver();
+      if (aopWeaver !== null) {
+        AopInfrastructureBeanFactory.registerDefaultComputationAspects(aopWeaver);
+      }
+      console.debug(
+        `[AopInfrastructure] Enterprise aspect-oriented programming infrastructure initialized: ` +
+        `provider=[${aopProvider.getInfrastructureProviderName()} v${aopProvider.getInfrastructureProviderVersion()}], ` +
+        `proxyFactory=[${AopInfrastructureBeanFactory.getProxyFactory()?.getProxyFactoryName() ?? "N/A"} v${AopInfrastructureBeanFactory.getProxyFactory()?.getProxyFactoryVersion() ?? "N/A"}], ` +
+        `weaver=[${aopWeaver?.getWeaverName() ?? "N/A"} v${aopWeaver?.getWeaverVersion() ?? "N/A"}], ` +
+        `registeredAspects=[${aopWeaver?.getRegisteredAspectCount() ?? 0}], ` +
+        `pointcuts=[${aopWeaver?.getRegisteredPointcuts().map((p) => p.getPointcutName()).join(", ") ?? "N/A"}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -578,14 +597,28 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const documentBuilder = EnterpriseFizzBuzzDocumentBuilderFactoryBeanFactory.createBuilder();
   const documentVisitor = EnterpriseFizzBuzzDocumentVisitorFactoryBeanFactory.createVisitor();
   const documentRenderer = EnterpriseFizzBuzzDocumentRendererFactoryBeanFactory.createRenderer();
-  const documentAwareDecorator =
+  const baseDocumentAwareDecorator =
     EnterpriseFizzBuzzDocumentAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
       configurationAwareDecorator,
       documentBuilder,
       documentVisitor,
       documentRenderer,
     );
-  return documentAwareDecorator;
+  if (AopInfrastructureBeanFactory.isInfrastructureInitialized()) {
+    const aopDecorator = AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      baseDocumentAwareDecorator,
+      "STANDARD_AOP_ENABLED",
+    );
+    console.debug(
+      `[AspectOrientedResolutionFacadeDecorator] AOP-aware decorator created: ` +
+      `decorator=[${aopDecorator.getDecoratorName()} v${aopDecorator.getDecoratorVersion()}], ` +
+      `proxyFactory=[${aopDecorator.getAopProxyFactory().getProxyFactoryName()} v${aopDecorator.getAopProxyFactory().getProxyFactoryVersion()}], ` +
+      `weaver=[${aopDecorator.getAopWeaver().getWeaverName()} v${aopDecorator.getAopWeaver().getWeaverVersion()}], ` +
+      `wovenAspects=[${aopDecorator.getAopWeaver().getRegisteredAspectCount()}]`,
+    );
+    return aopDecorator;
+  }
+  return baseDocumentAwareDecorator;
 }
 
 let mdbCallbackRegistered = false;
