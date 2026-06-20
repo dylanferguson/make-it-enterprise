@@ -13,18 +13,21 @@ import { DivisibilityEvaluationStrategyChainFactoryBeanFactory } from "./Divisib
 export class ModuloEvaluationStrategyFactoryBeanImpl extends AbstractBaseModuloEvaluationStrategyFactoryBean {
   private readonly remainderComputationSupervisor: IRemainderComputationSupervisor;
   private readonly evaluationChain: IDivisibilityEvaluationStrategyChain | null;
+  private readonly enterpriseMode: boolean;
 
   constructor(
     factoryBeanName: string = "DefaultModuloEvaluationStrategyFactoryBean",
     factoryBeanVersion: string = "2.0.0-ENTERPRISE",
     remainderComputationSupervisor?: IRemainderComputationSupervisor,
     evaluationChain?: IDivisibilityEvaluationStrategyChain,
+    enterpriseMode: boolean = false,
   ) {
     super(factoryBeanName, factoryBeanVersion, true);
     this.remainderComputationSupervisor =
       remainderComputationSupervisor ??
       SupervisedDecoratedRemainderDelegationServiceFactoryBeanFactory.createSingletonSupervisedDecoratedDelegationService();
     this.evaluationChain = evaluationChain ?? null;
+    this.enterpriseMode = enterpriseMode;
   }
 
   override createProvider(): IModuloEvaluationStrategyProvider {
@@ -39,7 +42,7 @@ export class ModuloEvaluationStrategyFactoryBeanImpl extends AbstractBaseModuloE
         this.evaluationChain,
       );
     } else {
-      const chainFactoryBean = DivisibilityEvaluationStrategyChainFactoryBeanFactory.createFactoryBean(true, true, 1000);
+      const chainFactoryBean = DivisibilityEvaluationStrategyChainFactoryBeanFactory.createFactoryBean(true, true, 1000, this.enterpriseMode);
       const chain = chainFactoryBean.createChain();
       defaultStrategy = new ChainBasedModuloEvaluationStrategyImpl(chain);
     }
@@ -65,11 +68,14 @@ export class ModuloEvaluationStrategyFactoryBeanFactory {
   static createFactoryBean(
     factoryBeanName: string = "DefaultModuloEvaluationStrategyFactoryBean",
     remainderComputationSupervisor?: IRemainderComputationSupervisor,
+    enterpriseMode: boolean = false,
   ): ModuloEvaluationStrategyFactoryBeanImpl {
     return new ModuloEvaluationStrategyFactoryBeanImpl(
       factoryBeanName,
       "2.0.0-ENTERPRISE",
       remainderComputationSupervisor,
+      undefined,
+      enterpriseMode,
     );
   }
 }

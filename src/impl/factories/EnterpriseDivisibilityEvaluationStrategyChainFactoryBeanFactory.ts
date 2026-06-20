@@ -11,28 +11,28 @@ import { MetricsCollectingDivisibilityEvaluationStrategyChainLinkImpl } from "..
 import { LatencyThresholdDivisibilityEvaluationStrategyChainLinkImpl } from "../chains/LatencyThresholdDivisibilityEvaluationStrategyChainLinkImpl.js";
 import { ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl } from "../chains/ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl.js";
 import { DivisibilityEvaluationStrategyChainBuilderImpl } from "../builders/DivisibilityEvaluationStrategyChainBuilderImpl.js";
-import { DivisibilityEvaluationStrategyChainConfigurationContextImpl } from "../configuration/DivisibilityEvaluationStrategyChainConfigurationContextImpl.js";
+import { EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl } from "../configuration/EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl.js";
 
-export class DivisibilityEvaluationStrategyChainFactoryBeanImpl extends AbstractBaseDivisibilityEvaluationStrategyChainFactory {
-  private static readonly FACTORY_BEAN_NAME = "DivisibilityEvaluationStrategyChainFactoryBean";
-  private static readonly FACTORY_BEAN_VERSION = "2.0.0-ENTERPRISE";
+export class EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl extends AbstractBaseDivisibilityEvaluationStrategyChainFactory {
+  private static readonly FACTORY_BEAN_NAME = "EnterpriseDivisibilityEvaluationStrategyChainFactory";
+  private static readonly FACTORY_BEAN_VERSION = "3.0.0-ENTERPRISE";
 
-  private readonly configurationContext: DivisibilityEvaluationStrategyChainConfigurationContextImpl;
+  private readonly configurationContext: EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl;
 
-  constructor(configurationContext: DivisibilityEvaluationStrategyChainConfigurationContextImpl) {
+  constructor(configurationContext: EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl) {
     super(
-      DivisibilityEvaluationStrategyChainFactoryBeanImpl.FACTORY_BEAN_NAME,
-      DivisibilityEvaluationStrategyChainFactoryBeanImpl.FACTORY_BEAN_VERSION,
+      EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl.FACTORY_BEAN_NAME,
+      EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl.FACTORY_BEAN_VERSION,
       true,
     );
     this.configurationContext = configurationContext;
   }
 
   override createChain(): IDivisibilityEvaluationStrategyChain {
-    this.logInstantiation("ChainBasedDivisibilityEvaluationStrategyChain");
+    this.logInstantiation("EnterpriseChainBasedDivisibilityEvaluationStrategyChain");
     const builder: IDivisibilityEvaluationStrategyChainBuilder = new DivisibilityEvaluationStrategyChainBuilderImpl();
 
-    if (this.configurationContext.isEnterpriseMode() && this.configurationContext.isCachingEnabled()) {
+    if (this.configurationContext.isValidationEnabled()) {
       builder.addLink(new ValidationDivisibilityEvaluationStrategyChainLinkImpl());
     }
 
@@ -42,7 +42,7 @@ export class DivisibilityEvaluationStrategyChainFactoryBeanImpl extends Abstract
       ));
     }
 
-    if (this.configurationContext.isEnterpriseMode()) {
+    if (this.configurationContext.isMetricsCollectionEnabled()) {
       builder.addLink(new MetricsCollectingDivisibilityEvaluationStrategyChainLinkImpl());
     }
 
@@ -50,11 +50,14 @@ export class DivisibilityEvaluationStrategyChainFactoryBeanImpl extends Abstract
       builder.addLink(new AuditTrailDivisibilityEvaluationStrategyChainLinkImpl());
     }
 
-    if (this.configurationContext.isEnterpriseMode()) {
-      builder.addLink(new LatencyThresholdDivisibilityEvaluationStrategyChainLinkImpl());
+    if (this.configurationContext.isLatencyThresholdEnabled()) {
+      builder.addLink(new LatencyThresholdDivisibilityEvaluationStrategyChainLinkImpl(
+        this.configurationContext.getLatencyWarnThresholdMs(),
+        this.configurationContext.getLatencyCriticalThresholdMs(),
+      ));
     }
 
-    if (this.configurationContext.isEnterpriseMode()) {
+    if (this.configurationContext.isThreadBoundaryEnabled()) {
       builder.addLink(new ThreadBoundaryDivisibilityEvaluationStrategyChainLinkImpl());
     }
 
@@ -64,48 +67,30 @@ export class DivisibilityEvaluationStrategyChainFactoryBeanImpl extends Abstract
     return new ChainBasedDivisibilityEvaluationStrategyChainImpl(headLink);
   }
 
-  getConfigurationContext(): DivisibilityEvaluationStrategyChainConfigurationContextImpl {
+  getConfigurationContext(): EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl {
     return this.configurationContext;
   }
 }
 
-export class DivisibilityEvaluationStrategyChainFactoryBeanFactory {
-  private static instance: DivisibilityEvaluationStrategyChainFactoryBeanImpl | null = null;
+export class EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory {
+  private static instance: EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl | null = null;
 
   static createFactoryBean(
-    enableCaching: boolean = true,
-    enableAuditTrail: boolean = false,
-    maxCacheSize: number = 1000,
-    enterpriseMode: boolean = false,
-  ): DivisibilityEvaluationStrategyChainFactoryBeanImpl {
-    if (DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance === null) {
-      const config = new DivisibilityEvaluationStrategyChainConfigurationContextImpl(
-        enableCaching,
-        enableAuditTrail,
-        maxCacheSize,
-        enterpriseMode,
-      );
-      DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance =
-        new DivisibilityEvaluationStrategyChainFactoryBeanImpl(config);
+    config?: EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl,
+  ): EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl {
+    if (EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory.instance === null) {
+      const effectiveConfig = config ?? new EnterpriseDivisibilityEvaluationStrategyChainConfigurationContextImpl();
+      EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory.instance =
+        new EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl(effectiveConfig);
     }
-    return DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance;
-  }
-
-  static createFactoryBeanWithConfiguration(
-    config: DivisibilityEvaluationStrategyChainConfigurationContextImpl,
-  ): DivisibilityEvaluationStrategyChainFactoryBeanImpl {
-    if (DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance === null) {
-      DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance =
-        new DivisibilityEvaluationStrategyChainFactoryBeanImpl(config);
-    }
-    return DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance;
+    return EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory.instance;
   }
 
   static resetFactoryBean(): void {
-    DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance = null;
+    EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory.instance = null;
   }
 
-  static getInstance(): DivisibilityEvaluationStrategyChainFactoryBeanImpl | null {
-    return DivisibilityEvaluationStrategyChainFactoryBeanFactory.instance;
+  static getInstance(): EnterpriseDivisibilityEvaluationStrategyChainFactoryImpl | null {
+    return EnterpriseDivisibilityEvaluationStrategyChainFactoryBeanFactory.instance;
   }
 }

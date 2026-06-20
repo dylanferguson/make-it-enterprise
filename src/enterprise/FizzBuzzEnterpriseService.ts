@@ -6,6 +6,8 @@ import { FizzBuzzHealthIndicatorImpl } from "../impl/health/FizzBuzzHealthIndica
 import { EnterpriseInterceptorChainImpl } from "../impl/interceptors/enterprise/EnterpriseInterceptorChainImpl.js";
 import { RetryValueResolverDecorator } from "../patterns/RetryValueResolverDecorator.js";
 import { FallbackValueResolverDecorator } from "../patterns/FallbackValueResolverDecorator.js";
+import { ThreadLocalContextPropagatingValueResolverDecorator } from "../patterns/ThreadLocalContextPropagatingValueResolverDecorator.js";
+import { SloThresholdAlertingValueResolverDecorator } from "../patterns/SloThresholdAlertingValueResolverDecorator.js";
 import { SessionManagedResolverProxy } from "../impl/proxies/SessionManagedResolverProxy.js";
 import type { ICompositeValueResolver } from "../contracts/ICompositeValueResolver.js";
 import type { IComputationEventNotificationBus } from "../contracts/IComputationEventNotificationBus.js";
@@ -81,11 +83,26 @@ export class FizzBuzzEnterpriseServiceFactoryBeanFactory {
         resolve: (value: number): string => interceptorChain.proceed(value),
       };
 
+      const threadLocalDecoratedResolver = new ThreadLocalContextPropagatingValueResolverDecorator(
+        interceptorWrappedResolver,
+      );
+
+      const sloAlertingDecoratedResolver = new SloThresholdAlertingValueResolverDecorator(
+        threadLocalDecoratedResolver,
+        sloCollector,
+        10,
+        80,
+      );
+
+      const enterpriseDecoratedResolver: ICompositeValueResolver = {
+        resolve: (value: number): string => sloAlertingDecoratedResolver.resolve(value),
+      };
+
       const sessionManager = enterpriseContext.getSessionManager();
       const postProcessorChain = enterpriseContext.getResultPostProcessorChain();
 
       const sessionManagedResolver: ICompositeValueResolver = new SessionManagedResolverProxy(
-        interceptorWrappedResolver,
+        enterpriseDecoratedResolver,
         sessionManager,
         postProcessorChain,
       );

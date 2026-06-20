@@ -52,6 +52,7 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
       ModuloEvaluationStrategyFactoryBeanFactory.createFactoryBean(
         "FizzBuzzServiceLocatorModuloEvaluationStrategyFactoryBean",
         this.remainderComputationSupervisor,
+        true,
       );
     const evaluationStrategyProvider: IModuloEvaluationStrategyProvider =
       this.moduloEvaluationStrategyFactoryBean.createProvider();
