@@ -4,6 +4,8 @@ import type { IModuloOperationChainHandler } from "../../contracts/IModuloOperat
 import { InMemoryModuloEvaluationStrategyFactoryBeanRegistryImpl } from "../registry/InMemoryModuloEvaluationStrategyFactoryBeanRegistryImpl.js";
 import { ProgrammaticModuloRegistrationBeanImpl } from "../registry/ProgrammaticModuloRegistrationBeanImpl.js";
 import { ModuloOperationChainBuilder } from "../modulo/ModuloOperationChainBuilder.js";
+import { VisitorDrivenHandlerDecoratorStackFactoryBeanFactory } from "../../modulovisitation/factories/VisitorDrivenHandlerDecoratorStackFactoryBeanFactory.js";
+import { EnterpriseModuloArithmeticVisitorFactoryBeanFactory } from "../../modulovisitation/factories/EnterpriseModuloArithmeticVisitorFactoryBeanFactory.js";
 
 export class AbstractBaseDivisibilityStrategyProviderResolver {
   private static readonly RESOLVER_NAME = "AbstractBaseDivisibilityStrategyProviderResolver";
@@ -15,6 +17,20 @@ export class AbstractBaseDivisibilityStrategyProviderResolver {
 
   initialize(): void {
     if (!this.initialized) {
+      if (VisitorDrivenHandlerDecoratorStackFactoryBeanFactory.getDecoratorStackProduct() === null) {
+        const product = VisitorDrivenHandlerDecoratorStackFactoryBeanFactory.initializeDecoratorStackInfrastructure(
+          true,
+          true,
+        );
+        console.debug(
+          `[${AbstractBaseDivisibilityStrategyProviderResolver.RESOLVER_NAME}] ` +
+          `Visitor-driven modulo arithmetic decorator stack initialized: ` +
+          `product=[${product.getHandlerName()} v${product.getHandlerVersion()}], ` +
+          `visitor=[${EnterpriseModuloArithmeticVisitorFactoryBeanFactory.getVisitor()?.getVisitorName() ?? "N/A"}], ` +
+          `registeredVisitors=[${product.getRegisteredVisitorCount()}], ` +
+          `descriptor=[${product.getActiveVisitorDescriptor()}]`,
+        );
+      }
       this.registry = new InMemoryModuloEvaluationStrategyFactoryBeanRegistryImpl();
       const registrationBean: IEnterpriseServiceLocatorRegistrationBean =
         new ProgrammaticModuloRegistrationBeanImpl();

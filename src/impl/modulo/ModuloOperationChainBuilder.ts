@@ -5,6 +5,9 @@ import { CachingModuloChainHandlerImpl } from "./handlers/CachingModuloChainHand
 import { AuditTrailModuloChainHandlerImpl } from "./handlers/AuditTrailModuloChainHandlerImpl.js";
 import { NativeModuloOperatorChainHandlerImpl } from "./handlers/NativeModuloOperatorChainHandlerImpl.js";
 import { ProtocolStackAwareModuloChainHandlerImpl } from "./handlers/ProtocolStackAwareModuloChainHandlerImpl.js";
+import { VisitorDrivenModuloArithmeticHandlerImpl } from "../../modulovisitation/impl/handlers/VisitorDrivenModuloArithmeticHandlerImpl.js";
+import { VisitorDrivenHandlerDecoratorStackFactoryBeanFactory } from "../../modulovisitation/factories/VisitorDrivenHandlerDecoratorStackFactoryBeanFactory.js";
+import type { IModuloArithmeticVisitorHandlerProduct } from "../../modulovisitation/contracts/IVisitorDrivenModuloArithmeticHandler.js";
 
 export class ModuloOperationChainBuilder {
   private readonly preHandlers: IModuloOperationChainHandler[] = [];
@@ -14,6 +17,7 @@ export class ModuloOperationChainBuilder {
   private validationEnabled: boolean = true;
   private protocolStackEnabled: boolean = false;
   private protocolStackHandler: IModuloOperationChainHandler | null = null;
+  private visitorDrivenEnabled: boolean = true;
 
   withValidation(enabled: boolean): this {
     this.validationEnabled = enabled;
@@ -51,6 +55,11 @@ export class ModuloOperationChainBuilder {
     return this;
   }
 
+  withVisitorDriven(enabled: boolean): this {
+    this.visitorDrivenEnabled = enabled;
+    return this;
+  }
+
   build(): IModuloOperationChainHandler {
     const handlers: IModuloOperationChainHandler[] = [];
 
@@ -74,7 +83,19 @@ export class ModuloOperationChainBuilder {
       handlers.push(protocolStackHandler);
     }
 
-    handlers.push(new NativeModuloOperatorChainHandlerImpl());
+    if (this.visitorDrivenEnabled) {
+      const product: IModuloArithmeticVisitorHandlerProduct | null =
+        VisitorDrivenHandlerDecoratorStackFactoryBeanFactory.getDecoratorStackProduct();
+      if (product !== null) {
+        const visitorHandler = new VisitorDrivenModuloArithmeticHandlerImpl(product);
+        visitorHandler.setDelegateChain(new NativeModuloOperatorChainHandlerImpl());
+        handlers.push(visitorHandler);
+      } else {
+        handlers.push(new NativeModuloOperatorChainHandlerImpl());
+      }
+    } else {
+      handlers.push(new NativeModuloOperatorChainHandlerImpl());
+    }
 
     for (const handler of this.postHandlers) {
       handlers.push(handler);
