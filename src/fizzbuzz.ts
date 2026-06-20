@@ -136,6 +136,8 @@ import { DivisibilityStrategyChainOfResponsibilityFactoryBeanFactory } from "./a
 import { DivisibilityStrategyEvaluatorFactoryBeanFactory } from "./abstractdivisibilitystrategyprovider/factories/DivisibilityStrategyEvaluatorFactoryBeanFactory.js";
 import { AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./impl/factories/AbstractDivisibilityStrategyAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IFizzBuzzPipelineManager } from "./pipeline/contracts/IFizzBuzzPipelineManager.js";
+import type { IPipelineManagerResolutionStrategySelector } from "./pipelineresolution/contracts/IPipelineManagerResolutionStrategySelector.js";
+import { PipelineManagerResolutionStrategyInfrastructureProviderFactoryBeanFactory } from "./pipelineresolution/factories/PipelineManagerResolutionStrategyInfrastructureProviderFactoryBeanFactory.js";
 import { FizzBuzzPipelineManagerFactoryBeanFactory, FizzBuzzPipelineManagerConfigurationProfile } from "./pipeline/factories/FizzBuzzPipelineManagerFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
@@ -1027,12 +1029,41 @@ function resolveBatchChunkOrientedJob(
   return batchChunkOrientedJob;
 }
 
+let pipelineManagerResolutionStrategySelector: IPipelineManagerResolutionStrategySelector | null = null;
+let pipelineResolutionInfrastructureInitialized = false;
+
+function resolvePipelineManagerResolutionStrategySelector(): IPipelineManagerResolutionStrategySelector {
+  if (!pipelineResolutionInfrastructureInitialized) {
+    const infrastructure =
+      PipelineManagerResolutionStrategyInfrastructureProviderFactoryBeanFactory
+        .initializeResolutionStrategyInfrastructure(
+          "STANDARD",
+          "STANDARD",
+          () => resolvePipelineManager(),
+        );
+    pipelineManagerResolutionStrategySelector = infrastructure.selector;
+    pipelineResolutionInfrastructureInitialized = true;
+    console.debug(
+      `[PipelineManagerResolutionInfrastructure] Pipeline manager resolution strategy infrastructure initialized: ` +
+      `selector=[${infrastructure.selector.getSelectorName()} v${infrastructure.selector.getSelectorVersion()}], ` +
+      `profile=[${infrastructure.configurationProfile.getProfileName()} v${infrastructure.configurationProfile.getProfileVersion()}], ` +
+      `defaultStrategy=[${infrastructure.configurationProfile.getDefaultStrategyName()}], ` +
+      `registeredStrategies=[${infrastructure.selector.getRegisteredStrategyNames().join(", ")}]`,
+    );
+  }
+  return pipelineManagerResolutionStrategySelector!;
+}
+
 export function fizzBuzzValue(value: number): string {
-  const manager = resolvePipelineManager();
+  const resolutionStrategySelector = resolvePipelineManagerResolutionStrategySelector();
+  const resolutionStrategy = resolutionStrategySelector.selectPipelineManagerResolutionStrategy();
+  const manager = resolutionStrategy.resolvePipelineManager();
   return manager.executeSingleValuePipeline(value);
 }
 
 export function fizzBuzzRange(start: number, end: number): readonly string[] {
-  const manager = resolvePipelineManager();
+  const resolutionStrategySelector = resolvePipelineManagerResolutionStrategySelector();
+  const resolutionStrategy = resolutionStrategySelector.selectPipelineManagerResolutionStrategy();
+  const manager = resolutionStrategy.resolvePipelineManager();
   return manager.executeRangePipeline(start, end);
 }
