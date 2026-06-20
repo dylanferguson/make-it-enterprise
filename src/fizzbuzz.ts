@@ -104,6 +104,10 @@ import { DivisibilityExpressionFactoryBeanFactory } from "./expressionengine/fac
 import { AopInfrastructureFactoryBeanFactory as AopInfrastructureBeanFactory } from "./aop/factories/AopInfrastructureFactoryBeanFactory.js";
 import { AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory } from "./aop/factories/AspectOrientedResolutionFacadeDecoratorFactoryBeanFactory.js";
 import { ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory } from "./execution/factories/ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.js";
+import { EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory.js";
+import { EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory } from "./computedoutcome/factories/EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory.js";
+import { EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./computedoutcome/factories/EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IPreEvaluationAwareResolutionFacadeDecorator } from "./computedoutcome/contracts/index.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -391,6 +395,18 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    const preEvaluationRegistry = EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory.createRegistry();
+    const preEvaluationChain = EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory.createFullChain(true);
+    console.debug(
+      `[PreEvaluationInfrastructure] Enterprise computed outcome pre-evaluation command chain infrastructure initialized: ` +
+      `registry=[${preEvaluationRegistry.getRegistryName()} v${preEvaluationRegistry.getRegistryVersion()}], ` +
+      `chain=[${preEvaluationChain.getChainName()} v${preEvaluationChain.getChainVersion()}], ` +
+      `commands=[${preEvaluationChain.getRegisteredCommandNames().join(", ")}], ` +
+      `registeredCommandCount=[${preEvaluationChain.getRegisteredCommandCount()}], ` +
+      `registryCommandCount=[${preEvaluationRegistry.getRegisteredCommandCount()}]`,
+    );
+  }
   return true;
 })();
 
@@ -562,6 +578,26 @@ function resolveMediationOrchestrator(): IEnterpriseFizzBuzzDirectiveResolutionM
   return mediationOrchestrator!;
 }
 
+function wrapWithPreEvaluation(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IPreEvaluationAwareResolutionFacadeDecorator {
+  const registry = EnterpriseComputedOutcomePreEvaluationCommandRegistryFactoryBeanFactory.getRegistry();
+  const chain = EnterpriseComputedOutcomePreEvaluationCommandChainFactoryBeanFactory.getChain();
+  if (registry !== null && chain !== null) {
+    return EnterprisePreEvaluationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      facade,
+      chain,
+      registry,
+    );
+  }
+  throw new Error(
+    `[PreEvaluationInfrastructure] Pre-evaluation command chain infrastructure not initialized. ` +
+    `Cannot create pre-evaluation-aware decorator. ` +
+    `registry=[${registry !== null ? "initialized" : "null"}], ` +
+    `chain=[${chain !== null ? "initialized" : "null"}]`,
+  );
+}
+
 function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   let baseFacade: IFizzBuzzSingleValueResolutionFacade;
   if (BOOTSTRAP_GATE_INITIALIZED) {
@@ -615,9 +651,9 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
       `decorator=[${aopDecorator.getDecoratorName()} v${aopDecorator.getDecoratorVersion()}], ` +
       `proxyFactory=[${aopDecorator.getAopProxyFactory().getProxyFactoryName()} v${aopDecorator.getAopProxyFactory().getProxyFactoryVersion()}], ` +
       `weaver=[${aopDecorator.getAopWeaver().getWeaverName()} v${aopDecorator.getAopWeaver().getWeaverVersion()}], ` +
-      `wovenAspects=[${aopDecorator.getAopWeaver().getRegisteredAspectCount()}]`,
+      `      wovenAspects=[${aopDecorator.getAopWeaver().getRegisteredAspectCount()}]`,
     );
-    return aopDecorator;
+    return wrapWithPreEvaluation(aopDecorator);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -630,7 +666,7 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     `coordinatorEngaged=[${executionCoordinatorAwareFacade.isCoordinatorEngaged()}], ` +
     `strategies=[${executionCoordinatorAwareFacade.getExecutionCoordinator().getRegisteredExecutionStrategies().join(", ")}]`,
   );
-  return executionCoordinatorAwareFacade;
+  return wrapWithPreEvaluation(executionCoordinatorAwareFacade);
 }
 
 let mdbCallbackRegistered = false;
