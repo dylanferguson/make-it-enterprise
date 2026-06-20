@@ -168,6 +168,9 @@ import { ComputationResolutionMediatorArchitectureAwareResolutionFacadeDecorator
 import { ComputationResolutionAdapterRegistryFactoryBeanFactory } from "./computationadapter/factories/ComputationResolutionAdapterRegistryFactoryBeanFactory.js";
 import { DivisorSpecificComputationAdapterFactoryBeanFactory } from "./computationadapter/factories/DivisorSpecificComputationAdapterFactoryBeanFactory.js";
 import type { IEnterpriseComputationResolutionMediatorArchitecture } from "./computationadapter/contracts/IEnterpriseComputationResolutionMediatorArchitecture.js";
+import { EnterpriseClassificationStrategyProviderFactoryBeanFactory } from "./enterpriseclassification/factories/EnterpriseClassificationStrategyProviderFactoryBeanFactory.js";
+import { EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./enterpriseclassification/factories/EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IEnterpriseClassificationAwareResolutionFacadeDecorator } from "./enterpriseclassification/contracts/index.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -747,6 +750,24 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!EnterpriseClassificationStrategyProviderFactoryBeanFactory.isInfrastructureInitialized()) {
+      const classificationProvider = EnterpriseClassificationStrategyProviderFactoryBeanFactory.initializeClassificationInfrastructure();
+      const classificationRegistry = EnterpriseClassificationStrategyProviderFactoryBeanFactory.getRegistry()!;
+      const classificationVisitor = EnterpriseClassificationStrategyProviderFactoryBeanFactory.getVisitor()!;
+      const chainHead = classificationRegistry.getChainHead();
+      const registeredDivisors = classificationProvider.getRegisteredClassificationDivisors();
+      console.debug(
+        `[EnterpriseClassificationInfrastructure] Enterprise classification resolution infrastructure initialized: ` +
+        `provider=[${classificationProvider.getProviderName()} v${classificationProvider.getProviderVersion()}], ` +
+        `registry=[${classificationRegistry.getRegistryName()} v${classificationRegistry.getRegistryVersion()}], ` +
+        `visitor=[${classificationVisitor.getVisitorName()} v${classificationVisitor.getVisitorVersion()}], ` +
+        `registeredDivisors=[${registeredDivisors.join(", ")}], ` +
+        `registeredHandlers=[${classificationRegistry.getHandlerCount()}], ` +
+        `chainHead=[${chainHead?.getHandlerName() ?? "null"} v${chainHead?.getHandlerVersion() ?? "N/A"}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -1020,7 +1041,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
     const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
-    return wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    return wrapWithEnterpriseClassificationResolution(mediatorWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1039,9 +1061,38 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
   const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
   const postProcessed = wrapWithPostProcessorResolution(jndiDecorated);
-  const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
-  const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
-  return wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
+    const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
+    const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
+    return wrapWithEnterpriseClassificationResolution(mediatorWrapped);
+}
+
+function wrapWithEnterpriseClassificationResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (EnterpriseClassificationStrategyProviderFactoryBeanFactory.isInfrastructureInitialized()) {
+    const provider = EnterpriseClassificationStrategyProviderFactoryBeanFactory.getProvider()!;
+    const visitor = EnterpriseClassificationStrategyProviderFactoryBeanFactory.getVisitor()!;
+    const classificationDecorator: IEnterpriseClassificationAwareResolutionFacadeDecorator =
+      EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        provider,
+        visitor,
+        true,
+      );
+    const registeredDivisors = provider.getRegisteredClassificationDivisors();
+    console.debug(
+      `[EnterpriseClassificationResolutionDecorator] Enterprise classification resolution decorator applied: ` +
+      `decorator=[${classificationDecorator.getDecoratorName()} v${classificationDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${classificationDecorator.getWrappedFacadeName()}], ` +
+      `provider=[${provider.getProviderName()} v${provider.getProviderVersion()}], ` +
+      `registeredDivisors=[${registeredDivisors.join(", ")}], ` +
+      `handlerCount=[${provider.getClassificationRegistry().getHandlerCount()}], ` +
+      `decoratorEnabled=[${classificationDecorator.isDecoratorEnabled()}]`,
+    );
+    return classificationDecorator;
+  }
+  return facade;
 }
 
 function wrapWithComputationResolutionMediatorArchitecture(
