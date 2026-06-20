@@ -27,6 +27,10 @@ import { DivisibilityValidationEnforcementGateFactoryBeanFactory } from "./impl/
 import { DefaultValidationEnforcementMetricsCollectorImpl } from "./impl/validation/DefaultValidationEnforcementMetricsCollectorImpl.js";
 import { MessagePropertyResolutionChainFactoryBeanFactory } from "./impl/factories/MessagePropertyResolutionChainFactoryBeanFactory.js";
 import { MessageTemplateCodecProviderFactoryBeanFactory } from "./impl/factories/MessageTemplateCodecProviderFactoryBeanFactory.js";
+import {
+  InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory,
+  InterceptionFilterChainDecoratorConfigurationProfile,
+} from "./impl/factories/InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 
@@ -117,7 +121,12 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
       baseFacade,
       "ENABLED_STRICT",
     );
-  return validationAwareDecorator;
+  const interceptionFilterChainDecorator =
+    InterceptionFilterChainResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+      validationAwareDecorator,
+      InterceptionFilterChainDecoratorConfigurationProfile.ENABLED_STANDARD,
+    );
+  return interceptionFilterChainDecorator;
 }
 
 export function fizzBuzzValue(value: number): string {
