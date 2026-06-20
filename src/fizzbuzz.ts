@@ -36,6 +36,7 @@ import {
   EnterpriseComputationGovernanceFacadeConfigurationProfile,
 } from "./impl/governance/EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.js";
 import type { IEnterpriseComputationGovernancePolicyEnforcementFacade } from "./contracts/IEnterpriseComputationGovernancePolicyEnforcementFacade.js";
+import { EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory, DivisibilityResolutionFacadeConfigurationProfile } from "./impl/factories/EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 
@@ -98,6 +99,16 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       `esbChannel=[${busChannel.getChannelName()}], ` +
       `esbRouter=[${busRouter.getRouterName()} v${busRouter.getRouterVersion()}], ` +
       `esbBinding=[${busBinding.getBindingName()} v${busBinding.getBindingVersion()}]`,
+    );
+  }
+  {
+    const divisibilityFacade = EnterpriseDivisibilityResolutionFacadeFactoryBeanFactory.createDivisibilityResolutionFacade(
+      DivisibilityResolutionFacadeConfigurationProfile.FULLY_DECORATED,
+    );
+    console.debug(
+      `[DivisibilityResolutionInfrastructure] Enterprise divisibility resolution facade initialized: ` +
+      `facade=[${divisibilityFacade.getFacadeName()} v${divisibilityFacade.getFacadeVersion()}], ` +
+      `strategy=[${divisibilityFacade.getResolutionStrategyDescription()}]`,
     );
   }
   if (!EnterpriseComputationGovernanceEnforcementFacadeFactoryBeanFactory.getCurrentFacade()) {
