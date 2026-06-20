@@ -11,6 +11,7 @@ import {
   FizzBuzzResolutionFacadeConfigurationProfile,
 } from "./impl/factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
 import { FizzBuzzResolutionFacadeFactoryBeanFactory } from "./impl/factories/FizzBuzzResolutionFacadeFactoryBeanFactory.js";
+import { DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory } from "./impl/factories/DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.js";
 
 const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   if (!EnterpriseApplicationBootstrapInitializerFactoryBean.isInitialized()) {
@@ -18,6 +19,9 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
   }
   if (!FizzBuzzEnterpriseApplicationContextFactoryBean.isContextInitialized()) {
     FizzBuzzEnterpriseApplicationContextFactoryBean.createApplicationContext("STANDARD");
+  }
+  if (!DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.isEnterpriseSupervisorChainInitialized()) {
+    DivisibleByExpressionEnterpriseSupervisorFactoryBeanFactory.initializeEnterpriseSupervisorChain();
   }
   return true;
 })();
