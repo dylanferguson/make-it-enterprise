@@ -171,6 +171,9 @@ import type { IEnterpriseComputationResolutionMediatorArchitecture } from "./com
 import { EnterpriseClassificationStrategyProviderFactoryBeanFactory } from "./enterpriseclassification/factories/EnterpriseClassificationStrategyProviderFactoryBeanFactory.js";
 import { EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./enterpriseclassification/factories/EnterpriseClassificationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IEnterpriseClassificationAwareResolutionFacadeDecorator } from "./enterpriseclassification/contracts/index.js";
+import { JaasSecurityInfrastructureProviderFactoryBean } from "./security/factories/JaasSecurityInfrastructureProviderFactoryBean.js";
+import { SecurityAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./security/factories/SecurityAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { ISecurityContext } from "./security/contracts/index.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -768,6 +771,21 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!JaasSecurityInfrastructureProviderFactoryBean.isInfrastructureInitialized()) {
+      const securityProvider = JaasSecurityInfrastructureProviderFactoryBean.initializeInfrastructure();
+      const securityCtx = JaasSecurityInfrastructureProviderFactoryBean.getSecurityContext()!;
+      const subject = JaasSecurityInfrastructureProviderFactoryBean.getSubject()!;
+      console.debug(
+        `[JaasSecurityInfrastructure] Enterprise JAAS security infrastructure initialized: ` +
+        `provider=[${securityProvider.getProviderName()} v${securityProvider.getProviderVersion()}], ` +
+        `securityContext=[${securityCtx.getSecurityContextName()} v${securityCtx.getSecurityContextVersion()}], ` +
+        `subject=[${subject.getSubjectDescriptor()}], ` +
+        `callerPrincipal=[${securityCtx.getCallerPrincipal().getName()}], ` +
+        `roles=[${subject.getPrincipals().filter(p => p.getPrincipalType() === "FizzBuzzRole").map(p => p.getName()).join(", ")}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -1042,7 +1060,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
-    return wrapWithEnterpriseClassificationResolution(mediatorWrapped);
+    const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
+    return wrapWithJaasSecurityResolution(classificationWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1064,7 +1083,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const strategyLookupWrapped = wrapWithStrategyLookupServiceResolution(postProcessed);
     const orchestrationWrapped = wrapWithOrchestrationMediationResolution(strategyLookupWrapped);
     const mediatorWrapped = wrapWithComputationResolutionMediatorArchitecture(orchestrationWrapped);
-    return wrapWithEnterpriseClassificationResolution(mediatorWrapped);
+    const classificationWrapped = wrapWithEnterpriseClassificationResolution(mediatorWrapped);
+    return wrapWithJaasSecurityResolution(classificationWrapped);
 }
 
 function wrapWithEnterpriseClassificationResolution(
@@ -1313,6 +1333,31 @@ function wrapWithComputationStateMachine(
     `slaCompliance=[${stateMachineDecorator.getSlaCompliancePercentage().toFixed(2)}%]`,
   );
   return stateMachineDecorator;
+}
+
+function wrapWithJaasSecurityResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (JaasSecurityInfrastructureProviderFactoryBean.isInfrastructureInitialized()) {
+    const securityDecorator =
+      SecurityAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(facade);
+    const securityInfo = securityDecorator as IFizzBuzzSingleValueResolutionFacade & {
+      getDecoratorName: () => string;
+      getDecoratorVersion: () => string;
+      getSecurityContext: () => ISecurityContext;
+      getRequiredRole: () => string;
+      isSecurityEnabled: () => boolean;
+    };
+    console.debug(
+      `[JaasSecurityResolutionDecorator] JAAS security resolution decorator applied: ` +
+      `decorator=[${securityInfo.getDecoratorName()} v${securityInfo.getDecoratorVersion()}], ` +
+      `securityContext=[${securityInfo.getSecurityContext().getSecurityContextName()}], ` +
+      `requiredRole=[${securityInfo.getRequiredRole()}], ` +
+      `securityEnabled=[${securityInfo.isSecurityEnabled()}]`,
+    );
+    return securityDecorator;
+  }
+  return facade;
 }
 
 let mdbCallbackRegistered = false;
