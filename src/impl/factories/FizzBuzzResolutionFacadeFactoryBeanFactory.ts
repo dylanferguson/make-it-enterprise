@@ -7,6 +7,7 @@ import { FizzBuzzEnterpriseServiceFactoryBeanFactory } from "../../enterprise/Fi
 import { FizzBuzzEnterpriseServiceFacadeImpl } from "../delegates/FizzBuzzEnterpriseServiceFacadeImpl.js";
 import { FizzBuzzClientSideServiceDelegateImpl } from "../delegates/FizzBuzzClientSideServiceDelegateImpl.js";
 import { BusinessDelegateLookupServiceFactoryBean } from "../delegates/BusinessDelegateLookupServiceFactoryBean.js";
+import { ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory } from "./ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory.js";
 import type { IFizzBuzzSingleValueResolutionFacade } from "../../contracts/IFizzBuzzSingleValueResolutionFacade.js";
 import type { IFizzBuzzResolutionFacadeFactoryBean } from "../../contracts/IFizzBuzzResolutionFacadeFactoryBean.js";
 import type { IFizzBuzzServiceDelegate } from "../../contracts/IFizzBuzzServiceDelegate.js";
@@ -93,8 +94,11 @@ class FizzBuzzResolutionFacadeFactoryBeanImpl
     const enterpriseServiceFacade = new FizzBuzzEnterpriseServiceFacadeImpl(
       enterpriseService,
     );
-    const clientSideDelegate = new FizzBuzzClientSideServiceDelegateImpl(
+    const protocolAwareFacade = ProtocolAwareEnterpriseServiceFacadeFactoryBeanFactory.createProtocolAwareFacade(
       enterpriseServiceFacade,
+    );
+    const clientSideDelegate = new FizzBuzzClientSideServiceDelegateImpl(
+      protocolAwareFacade,
     );
     const lookupServiceFactoryBean =
       BusinessDelegateLookupServiceFactoryBean.createLookupServiceFactoryBean(
