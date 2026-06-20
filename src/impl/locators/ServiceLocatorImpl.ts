@@ -6,6 +6,8 @@ import type { ICompositeValueResolver } from "../../contracts/ICompositeValueRes
 import type { IRangeCalculator } from "../../contracts/IRangeCalculator.js";
 import type { IModuloArithmeticStrategyProvider } from "../../contracts/IModuloArithmeticStrategyProvider.js";
 import type { IStrategyRegistry } from "../../contracts/IStrategyRegistry.js";
+import type { IFizzBuzzSessionManager } from "../../contracts/IFizzBuzzSessionManager.js";
+import type { IResultPostProcessorChain } from "../../contracts/IResultPostProcessorChain.js";
 import { ModuloDivisibilityEvaluatorImpl } from "../evaluators/ModuloDivisibilityEvaluatorImpl.js";
 import { FizzBuzzOutputFormatterImpl } from "../formatters/FizzBuzzOutputFormatterImpl.js";
 import { FizzBuzzStrategyFactoryImpl } from "../factories/FizzBuzzStrategyFactoryImpl.js";
@@ -17,6 +19,11 @@ import { DivisibilityCheckVisitor } from "../visitors/DivisibilityCheckVisitor.j
 import { StrategyRegistryImpl } from "../registry/StrategyRegistryImpl.js";
 import { FizzBuzzConfigurationContext } from "../configuration/FizzBuzzConfigurationContext.js";
 import { ValueResolverDecoratorChainBuilder } from "../builders/ValueResolverDecoratorChainBuilder.js";
+import { FizzBuzzSessionManagerFactoryImpl } from "../factories/FizzBuzzSessionManagerFactoryImpl.js";
+import { AuditTrailSessionInterceptor } from "../interceptors/AuditTrailSessionInterceptor.js";
+import { SessionManagedResolverProxy } from "../proxies/SessionManagedResolverProxy.js";
+import { ResultPostProcessorChainImpl } from "../postprocessors/ResultPostProcessorChainImpl.js";
+import { PassThroughResultPostProcessor } from "../postprocessors/PassThroughResultPostProcessor.js";
 
 export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
   private configurationContext: ReturnType<FizzBuzzConfigurationContext["build"]> | null = null;
@@ -33,12 +40,25 @@ export class ServiceLocatorImpl extends AbstractBaseServiceLocator {
     const baseResolver = new CompositeValueResolverImpl(handlerChain.getHead());
 
     const resolverDecoratorChain = new ValueResolverDecoratorChainBuilder();
-    const valueResolver: ICompositeValueResolver = resolverDecoratorChain
+    const decoratedResolver: ICompositeValueResolver = resolverDecoratorChain
       .withCaching(true)
       .withLogging(false)
       .withValidation(true)
       .withMetrics(true)
       .build(baseResolver);
+
+    const sessionFactory = new FizzBuzzSessionManagerFactoryImpl();
+    const sessionManager: IFizzBuzzSessionManager = sessionFactory.createSessionManager();
+    sessionManager.registerInterceptor(new AuditTrailSessionInterceptor());
+
+    const postProcessorChain: IResultPostProcessorChain = new ResultPostProcessorChainImpl();
+    postProcessorChain.addPostProcessor(new PassThroughResultPostProcessor());
+
+    const valueResolver: ICompositeValueResolver = new SessionManagedResolverProxy(
+      decoratedResolver,
+      sessionManager,
+      postProcessorChain,
+    );
 
     const rangeCalculator: IRangeCalculator = new FizzBuzzRangeCalculatorImpl(valueResolver);
 
