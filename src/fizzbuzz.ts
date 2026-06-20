@@ -153,6 +153,8 @@ import { EnterpriseJndiEjbBridgeInfrastructureFactoryBeanFactory } from "./impl/
 import type { IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator } from "./contracts/IEnterpriseJavaNamingDirectoryInterfaceAwareResolutionFacadeDecorator.js";
 import { FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory, FizzBuzzEnterpriseServiceEndpointConfigurationProfile } from "./endpoint/factories/FizzBuzzEnterpriseServiceEndpointFactoryBeanFactory.js";
 import { FizzBuzzEndpointAwareServiceActivatorImpl } from "./endpoint/FizzBuzzEndpointAwareServiceActivatorImpl.js";
+import { ComputationResultPostProcessorArchitectureFactoryBeanFactory } from "./resultpostprocessing/factories/ComputationResultPostProcessorArchitectureFactoryBeanFactory.js";
+import { PostProcessorAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./resultpostprocessing/factories/PostProcessorAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -634,6 +636,23 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
       );
     }
   }
+  {
+    if (!ComputationResultPostProcessorArchitectureFactoryBeanFactory.isArchitectureInitialized()) {
+      const postProcessorProvider =
+        ComputationResultPostProcessorArchitectureFactoryBeanFactory.initializeArchitecture();
+      const registry = ComputationResultPostProcessorArchitectureFactoryBeanFactory.getRegistry()!;
+      const chainHandler = ComputationResultPostProcessorArchitectureFactoryBeanFactory.getChainHandler()!;
+      console.debug(
+        `[PostProcessorArchitectureInfrastructure] Enterprise computation result post-processor architecture initialized: ` +
+        `provider=[${postProcessorProvider.getProviderName()} v${postProcessorProvider.getProviderVersion()}], ` +
+        `registry=[${registry.getRegistryName()} v${registry.getRegistryVersion()}], ` +
+        `chainHandler=[${chainHandler.getChainName()} v${chainHandler.getChainVersion()}], ` +
+        `registeredProcessors=[${registry.getRegisteredProcessors().map((p) => `${p.getProcessorName()}@${p.getProcessorPriority()}`).join(", ")}], ` +
+        `processorCount=[${registry.getProcessorCount()}], ` +
+        `chainDescriptor=[${postProcessorProvider.getActiveProcessorChainDescriptor()}]`,
+      );
+    }
+  }
   return true;
 })();
 
@@ -903,7 +922,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
     const txAwareDecorator = wrapWithTransactionPropagation(stateMachineAware);
     const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(txAwareDecorator);
-    return wrapWithEnterpriseJndiEjbResolution(adsDecorator);
+    const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
+    return wrapWithPostProcessorResolution(jndiDecorated);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -920,7 +940,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
   const stateMachineAware = wrapWithComputationStateMachine(preEvaluationAware);
   const transactionAware = wrapWithTransactionPropagation(stateMachineAware);
   const adsDecorator = wrapWithAbstractDivisibilityStrategyResolution(transactionAware);
-  return wrapWithEnterpriseJndiEjbResolution(adsDecorator);
+  const jndiDecorated = wrapWithEnterpriseJndiEjbResolution(adsDecorator);
+  return wrapWithPostProcessorResolution(jndiDecorated);
 }
 
 function wrapWithAbstractDivisibilityStrategyResolution(
@@ -1001,6 +1022,27 @@ function wrapWithEnterpriseJndiEjbResolution(
       `corbaBindings=[${CorbaNamingServiceFactoryBeanFactory.getNamingService()?.list().join(", ") ?? "N/A"}]`,
     );
     return ejbDecorator;
+  }
+  return facade;
+}
+
+function wrapWithPostProcessorResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (ComputationResultPostProcessorArchitectureFactoryBeanFactory.isArchitectureInitialized()) {
+    const postProcessorDecorator =
+      PostProcessorAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+        facade,
+        true,
+      );
+    console.debug(
+      `[PostProcessorResolutionDecorator] Post-processor resolution decorator applied: ` +
+      `decorator=[${postProcessorDecorator.getDecoratorName()} v${postProcessorDecorator.getDecoratorVersion()}], ` +
+      `wrappedFacade=[${postProcessorDecorator.getWrappedFacadeName()}], ` +
+      `provider=[${postProcessorDecorator.getPostProcessorProviderName()}], ` +
+      `enabled=[${postProcessorDecorator.isDecoratorEnabled()}]`,
+    );
+    return postProcessorDecorator;
   }
   return facade;
 }
