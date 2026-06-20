@@ -227,6 +227,10 @@ import type { IEnterpriseFizzBuzzResultValidationSpecificationVisitor } from "./
 import { ResultValidationSpecificationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./resultvalidationspecification/factories/ResultValidationSpecificationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
 import type { IResultValidationSpecificationAwareResolutionFacadeDecorator } from "./resultvalidationspecification/contracts/IResultValidationSpecificationAwareResolutionFacadeDecorator.js";
 import { DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl } from "./resultvalidationspecification/impl/DefaultEnterpriseFizzBuzzResultValidationSpecificationVisitorImpl.js";
+import { ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory } from "./modulocomputation/factories/ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.js";
+import type { IModuloRemainderComputationInfrastructure } from "./modulocomputation/factories/ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.js";
+import { ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory } from "./modulocomputation/factories/ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory.js";
+import type { IModuloRemainderComputationAwareResolutionFacadeDecorator } from "./modulocomputation/contracts/IModuloRemainderComputationAwareResolutionFacadeDecorator.js";
 
 let messagePropertyConfigurationInitialized = false;
 let jmsInfrastructureInitialized = false;
@@ -603,6 +607,28 @@ const BOOTSTRAP_GATE_INITIALIZED: boolean = ((): boolean => {
         `fiveFactoryBean=[${fiveFactoryBean.getFactoryBeanName()} v${fiveFactoryBean.getFactoryBeanVersion()}], ` +
         `threeChainHandler=[${threeFactoryBean.createChainHandler().getHandlerName()} v${threeFactoryBean.createChainHandler().getHandlerVersion()}], ` +
         `fiveChainHandler=[${fiveFactoryBean.createChainHandler().getHandlerName()} v${fiveFactoryBean.createChainHandler().getHandlerVersion()}]`,
+      );
+    }
+  }
+  {
+    if (!ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+      const mrcInfrastructure = ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.initializeInfrastructure(
+        [3, 5],
+        true,
+        true,
+      );
+      console.debug(
+        `[ModuloRemainderComputationInfrastructure] Enterprise modulo remainder computation chain-of-responsibility infrastructure initialized: ` +
+        `initializer=[${ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.getFactoryBeanName()} v${ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.getFactoryBeanVersion()}], ` +
+        `chainHandler=[${mrcInfrastructure.chainHandler.getHandlerName()} v${mrcInfrastructure.chainHandler.getHandlerVersion()}], ` +
+        `commandInvoker=[${mrcInfrastructure.commandInvoker.getInvokerName()} v${mrcInfrastructure.commandInvoker.getInvokerVersion()}], ` +
+        `computationVisitor=[${mrcInfrastructure.computationVisitor.getVisitorName()} v${mrcInfrastructure.computationVisitor.getVisitorVersion()}], ` +
+        `strategyProvider=[${mrcInfrastructure.strategyProvider.getProviderName()} v${mrcInfrastructure.strategyProvider.getProviderVersion()}], ` +
+        `registeredDivisors=[${mrcInfrastructure.registeredDivisors.join(", ")}], ` +
+        `chainHandlerNext=[${mrcInfrastructure.chainHandler.getHandlerName() !== null ? "present" : "null"}], ` +
+        `invokerRegisteredCommands=[${mrcInfrastructure.commandInvoker.getRegisteredCommandNames().join(", ")}], ` +
+        `visitorRegistryCount=[${mrcInfrastructure.computationVisitor.getVisitLog().length}], ` +
+        `providerRegisteredDivisors=[${mrcInfrastructure.strategyProvider.getRegisteredDivisors().join(", ")}]`,
       );
     }
   }
@@ -1284,7 +1310,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const mediated = wrapWithMediatorResolution(proxied);
     const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
     const validationSpecWrapped = wrapWithResultValidationSpecificationResolution(interceptorAdapted);
-    return wrapWithFormatterBridgeResolution(validationSpecWrapped);
+    const mrcWrapped = wrapWithModuloRemainderComputationResolution(validationSpecWrapped);
+    return wrapWithFormatterBridgeResolution(mrcWrapped);
   }
   const executionCoordinatorAwareFacade = ExecutionCoordinatorFacadeDecoratorFactoryBeanFactory.createCoordinatorAwareFacadeDecorator(
     baseDocumentAwareDecorator,
@@ -1314,7 +1341,8 @@ function resolveResolutionFacade(): IFizzBuzzSingleValueResolutionFacade {
     const mediated = wrapWithMediatorResolution(proxied);
     const interceptorAdapted = wrapWithInterceptorAdapterResolution(mediated);
     const validationSpecWrapped = wrapWithResultValidationSpecificationResolution(interceptorAdapted);
-    return wrapWithFormatterBridgeResolution(validationSpecWrapped);
+    const mrcWrapped = wrapWithModuloRemainderComputationResolution(validationSpecWrapped);
+    return wrapWithFormatterBridgeResolution(mrcWrapped);
 }
 
 let mediatorDecorator: IMediatorAwareResolutionFacadeDecorator | null = null;
@@ -1417,6 +1445,42 @@ function wrapWithResultValidationSpecificationResolution(
       );
     }
     return validationSpecificationDecorator;
+  }
+  return facade;
+}
+
+let moduloRemainderComputationDecorator: IModuloRemainderComputationAwareResolutionFacadeDecorator | null = null;
+
+function wrapWithModuloRemainderComputationResolution(
+  facade: IFizzBuzzSingleValueResolutionFacade,
+): IFizzBuzzSingleValueResolutionFacade {
+  if (ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.isInfrastructureInitialized()) {
+    if (moduloRemainderComputationDecorator === null) {
+      const mrcInfra = ModuloRemainderComputationInfrastructureInitializerFactoryBeanFactory.getInfrastructure()!;
+      moduloRemainderComputationDecorator =
+        ModuloRemainderComputationAwareResolutionFacadeDecoratorFactoryBeanFactory.createDecorator(
+          facade,
+          mrcInfra.chainHandler,
+          mrcInfra.commandInvoker,
+          mrcInfra.computationVisitor,
+          mrcInfra.strategyProvider,
+          mrcInfra.registeredDivisors,
+        );
+      console.debug(
+        `[ModuloRemainderComputationResolutionDecorator] Enterprise modulo remainder computation chain-of-responsibility resolution decorator applied: ` +
+        `decorator=[${moduloRemainderComputationDecorator.getDecoratorName()} v${moduloRemainderComputationDecorator.getDecoratorVersion()}], ` +
+        `wrappedFacade=[${moduloRemainderComputationDecorator.getWrappedFacadeName()}], ` +
+        `chainHandler=[${mrcInfra.chainHandler.getHandlerName()} v${mrcInfra.chainHandler.getHandlerVersion()}], ` +
+        `commandInvoker=[${mrcInfra.commandInvoker.getInvokerName()} v${mrcInfra.commandInvoker.getInvokerVersion()}], ` +
+        `computationVisitor=[${mrcInfra.computationVisitor.getVisitorName()} v${mrcInfra.computationVisitor.getVisitorVersion()}], ` +
+        `strategyProvider=[${mrcInfra.strategyProvider.getProviderName()} v${mrcInfra.strategyProvider.getProviderVersion()}], ` +
+        `registeredDivisors=[${mrcInfra.registeredDivisors.join(", ")}], ` +
+        `interceptionCount=[${moduloRemainderComputationDecorator.getDecoratorInterceptionCount()}], ` +
+        `computationCount=[${moduloRemainderComputationDecorator.getComputationCount()}], ` +
+        `decoratorEnabled=[${moduloRemainderComputationDecorator.isDecoratorEnabled()}]`,
+      );
+    }
+    return moduloRemainderComputationDecorator;
   }
   return facade;
 }
